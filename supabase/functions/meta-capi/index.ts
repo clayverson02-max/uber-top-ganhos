@@ -93,8 +93,12 @@ Deno.serve(async (req) => {
     });
     const result = await res.json();
 
+    // Always return 200 — Meta validation errors shouldn't break the client flow
+    if (!res.ok) {
+      console.warn("Meta CAPI rejected event:", event_name, JSON.stringify(result));
+    }
     return new Response(JSON.stringify({ ok: res.ok, result }), {
-      status: res.ok ? 200 : 500,
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
