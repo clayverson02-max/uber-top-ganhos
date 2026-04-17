@@ -1,42 +1,31 @@
 import { useState, useEffect } from "react";
-import { Check, Lock, Shield, Clock, Star, Zap, Loader2 } from "lucide-react";
+import { Check, Trophy, Loader2, Sparkles, Rocket } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { trackEvent } from "@/lib/pixel";
 import { toast } from "@/hooks/use-toast";
 
 const KIWIFY_URL = "https://pay.kiwify.com.br/RRZgaP9";
-const MAIN_PRICE = 7.9;
-const BUMP_PRICE = 5;
+const PRICE = 7.9;
+
+const LOADING_STEPS = [
+  "Analisando seu perfil de motorista...",
+  "Cruzando suas respostas com casos de sucesso...",
+  "Liberando estratégia personalizada...",
+  "Garantindo sua vaga no Desafio 2K...",
+];
 
 export const Checkout = () => {
-  const [bumpChecked, setBumpChecked] = useState(true);
-  const [minutes, setMinutes] = useState(14);
-  const [seconds, setSeconds] = useState(59);
-  const [name, setName] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
-  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
 
   useEffect(() => {
-    // Fire ViewContent + InitiateCheckout view on mount
     trackEvent("ViewContent", {
-      content_name: "2K em 7 Dias Apps",
-      value: MAIN_PRICE,
+      content_name: "2K em 7 Dias - Conscientização",
+      value: PRICE,
     });
   }, []);
-
-  useEffect(() => {
-    const t = setInterval(() => {
-      setSeconds((s) => {
-        if (s > 0) return s - 1;
-        setMinutes((m) => (m > 0 ? m - 1 : 0));
-        return 59;
-      });
-    }, 1000);
-    return () => clearInterval(t);
-  }, []);
-
-  const total = MAIN_PRICE + (bumpChecked ? BUMP_PRICE : 0);
 
   const formatPhone = (v: string) => {
     const d = v.replace(/\D/g, "").slice(0, 11);
@@ -45,283 +34,216 @@ export const Checkout = () => {
     return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
   };
 
-  const handleCheckout = async () => {
+  const handleContinue = async () => {
     if (loading) return;
-
-    // Validation
-    if (name.trim().length < 2) {
-      toast({ title: "Preencha seu nome", variant: "destructive" });
-      return;
-    }
     const phoneDigits = whatsapp.replace(/\D/g, "");
     if (phoneDigits.length < 10) {
-      toast({ title: "WhatsApp inválido", description: "Digite com DDD", variant: "destructive" });
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      toast({ title: "Email inválido", variant: "destructive" });
+      toast({
+        title: "WhatsApp inválido",
+        description: "Digite seu número com DDD",
+        variant: "destructive",
+      });
       return;
     }
 
     setLoading(true);
+    setLoadingStep(0);
+
+    // Animate loading steps
+    const stepInterval = setInterval(() => {
+      setLoadingStep((s) => (s < LOADING_STEPS.length - 1 ? s + 1 : s));
+    }, 700);
+
     try {
-      // 1) Save lead
-      const { error } = await supabase.from("leads").insert({
-        name: name.trim(),
+      // Save lead (only whatsapp + dummy required fields)
+      await supabase.from("leads").insert({
+        name: "Lead Funil",
         whatsapp: phoneDigits,
-        email: email.trim().toLowerCase(),
-        order_bump_active: bumpChecked,
-        total_price: total,
+        email: `lead-${phoneDigits}@funil.local`,
+        order_bump_active: false,
+        total_price: PRICE,
         user_agent: navigator.userAgent,
-        source: "checkout",
+        source: "funnel-final",
       });
-      if (error) throw error;
 
-      // 2) Fire Lead + InitiateCheckout (Pixel + CAPI deduped)
-      await Promise.all([
-        trackEvent("Lead", {
-          value: total,
-          content_name: "Lead Capturado",
-          email,
-          phone: phoneDigits,
-          first_name: name.split(" ")[0],
-        }),
-        trackEvent("InitiateCheckout", {
-          value: total,
-          content_name: bumpChecked ? "2K em 7 Dias + Tempo é Ouro" : "2K em 7 Dias",
-          email,
-          phone: phoneDigits,
-          first_name: name.split(" ")[0],
-        }),
-      ]);
+      await trackEvent("Lead", {
+        value: PRICE,
+        content_name: "Lead Capturado",
+        phone: phoneDigits,
+      });
 
-      // 3) Redirect to Kiwify
-      window.location.href = KIWIFY_URL;
+      // Wait for steps animation to play out (~3.2s)
+      await new Promise((r) => setTimeout(r, 3200));
+      clearInterval(stepInterval);
+      setLoadingStep(LOADING_STEPS.length - 1);
+
+      // Show success screen
+      setShowSuccess(true);
+
+      await trackEvent("InitiateCheckout", {
+        value: PRICE,
+        content_name: "2K em 7 Dias",
+        phone: phoneDigits,
+      });
     } catch (e) {
       console.error(e);
-      toast({ title: "Algo deu errado", description: "Tente novamente", variant: "destructive" });
+      clearInterval(stepInterval);
+      toast({
+        title: "Algo deu errado",
+        description: "Tente novamente",
+        variant: "destructive",
+      });
       setLoading(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-background px-4 py-6">
-      <div className="max-w-md mx-auto">
-        {/* Urgency timer */}
-        <div className="bg-destructive text-white text-center py-3 px-4 rounded-xl mb-4 font-bold text-sm flex items-center justify-center gap-2 animate-pulse">
-          <Clock className="w-4 h-4" />
-          OFERTA EXPIRA EM: {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
-        </div>
+  const goToCheckout = () => {
+    window.location.href = KIWIFY_URL;
+  };
 
-        {/* Headline */}
-        <div className="text-center mb-5">
-          <div className="inline-block bg-orange/20 border border-orange/40 rounded-full px-3 py-1 mb-3">
-            <span className="text-orange text-xs font-black uppercase">🔥 ÚLTIMAS VAGAS</span>
+  // ============ LOADING SCREEN ============
+  if (loading && !showSuccess) {
+    return (
+      <div className="min-h-screen gradient-hero px-5 py-10 flex flex-col items-center justify-center">
+        <div className="max-w-md w-full mx-auto text-center animate-fade-in">
+          <div className="w-20 h-20 rounded-full gradient-orange flex items-center justify-center mx-auto mb-6 shadow-orange">
+            <Loader2 className="w-10 h-10 text-white animate-spin" />
           </div>
-          <h1 className="text-2xl font-black leading-tight">
-            Falta só 1 passo pra você começar a faturar{" "}
-            <span className="text-money">R$ 2.000 em 7 dias</span>
-          </h1>
-        </div>
+          <h2 className="text-2xl font-black mb-3">Preparando tudo pra você...</h2>
+          <p className="text-muted-foreground text-sm mb-8">
+            Não feche essa tela, já liberamos seu acesso 👇
+          </p>
 
-        {/* Product card */}
-        <div className="bg-card rounded-2xl p-5 mb-3 border-2 border-orange shadow-orange">
-          <div className="flex items-start gap-3 mb-4">
-            <div className="w-14 h-14 rounded-xl gradient-orange flex items-center justify-center flex-shrink-0">
-              <Zap className="w-8 h-8 text-white" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-black text-lg leading-tight">2K em 7 Dias Apps</h3>
-              <p className="text-xs text-muted-foreground">
-                Método completo + planilha de horários + zonas quentes
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-muted-foreground line-through">R$ 97</p>
-              <p className="font-black text-money text-lg">R$ 7,90</p>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            {[
-              "Acesso imediato e vitalício",
-              "Estratégia exata pros 7 primeiros dias",
-              "Mapa de zonas de pico (SP, RJ, BH e +)",
-              "Funciona pra Uber, 99, InDrive (carro e moto)",
-            ].map((b, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded-full bg-money flex items-center justify-center flex-shrink-0">
-                  <Check className="w-3 h-3 text-white" strokeWidth={4} />
-                </div>
-                <span className="text-sm">{b}</span>
+          <div className="space-y-3 text-left">
+            {LOADING_STEPS.map((s, i) => (
+              <div
+                key={i}
+                className={`flex items-center gap-3 p-3 rounded-xl border transition-all duration-300 ${
+                  i <= loadingStep
+                    ? "bg-money/10 border-money/40 opacity-100"
+                    : "bg-card/30 border-border opacity-40"
+                }`}
+              >
+                {i < loadingStep ? (
+                  <div className="w-6 h-6 rounded-full bg-money flex items-center justify-center flex-shrink-0">
+                    <Check className="w-4 h-4 text-white" strokeWidth={4} />
+                  </div>
+                ) : i === loadingStep ? (
+                  <Loader2 className="w-6 h-6 text-orange animate-spin flex-shrink-0" />
+                ) : (
+                  <div className="w-6 h-6 rounded-full border-2 border-border flex-shrink-0" />
+                )}
+                <span className="text-sm font-semibold">{s}</span>
               </div>
             ))}
           </div>
         </div>
+      </div>
+    );
+  }
 
-        {/* Order Bump */}
-        <button
-          onClick={() => setBumpChecked(!bumpChecked)}
-          className={`w-full text-left bg-card rounded-2xl p-4 mb-3 border-2 transition-all ${
-            bumpChecked ? "border-money shadow-money" : "border-dashed border-money/50"
-          }`}
-        >
-          <div className="bg-money text-white text-center text-xs font-black py-1 rounded-md mb-3 uppercase tracking-wide">
-            ⭐ Melhor bônus que você pode levar hoje
+  // ============ SUCCESS / FINAL CTA SCREEN ============
+  if (showSuccess) {
+    return (
+      <div className="min-h-screen gradient-hero px-5 py-8 flex flex-col items-center justify-center">
+        <div className="max-w-md w-full mx-auto text-center animate-fade-in">
+          <div className="w-24 h-24 rounded-full gradient-money flex items-center justify-center mx-auto mb-5 shadow-money animate-pulse-cta">
+            <Trophy className="w-14 h-14 text-white" />
           </div>
-          <div className="flex items-start gap-3">
-            <div
-              className={`w-6 h-6 rounded-md border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all ${
-                bumpChecked ? "bg-money border-money" : "border-muted-foreground"
-              }`}
-            >
-              {bumpChecked && <Check className="w-4 h-4 text-white" strokeWidth={4} />}
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center justify-between gap-2 mb-1">
-                <h4 className="font-black text-base">SIM! Quero o "Tempo é Ouro"</h4>
-                <span className="font-black text-money text-base whitespace-nowrap">+ R$ 5,00</span>
-              </div>
-              <p className="text-xs text-muted-foreground leading-snug">
-                Aprenda os <strong className="text-foreground">3 horários secretos</strong> que
-                pagam até <strong className="text-money">3x mais</strong> a corrida. Aplica no mesmo
-                dia.
-              </p>
-            </div>
-          </div>
-        </button>
 
-        {/* Lead capture form */}
-        <div className="bg-card rounded-2xl p-4 mb-3 border-2 border-orange/40">
-          <h3 className="font-black text-base mb-1">📲 Preencha pra liberar sua vaga:</h3>
-          <p className="text-xs text-muted-foreground mb-3">
-            Vamos enviar o acesso no seu WhatsApp + Email assim que confirmarmos o pagamento.
-          </p>
-          <div className="space-y-2">
-            <input
-              type="text"
-              placeholder="Seu nome completo"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              maxLength={100}
-              className="w-full h-12 px-4 rounded-xl bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-orange text-base"
-            />
-            <input
-              type="tel"
-              inputMode="tel"
-              placeholder="WhatsApp com DDD"
-              value={whatsapp}
-              onChange={(e) => setWhatsapp(formatPhone(e.target.value))}
-              className="w-full h-12 px-4 rounded-xl bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-orange text-base"
-            />
-            <input
-              type="email"
-              inputMode="email"
-              placeholder="Seu melhor email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              maxLength={255}
-              className="w-full h-12 px-4 rounded-xl bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-orange text-base"
-            />
-          </div>
-        </div>
-
-        {/* Total */}
-        <div className="bg-card rounded-2xl p-4 mb-4 border border-border">
-          <div className="flex justify-between items-center mb-2 text-sm">
-            <span className="text-muted-foreground">2K em 7 Dias Apps</span>
-            <span className="font-bold">R$ 7,90</span>
-          </div>
-          {bumpChecked && (
-            <div className="flex justify-between items-center mb-2 text-sm animate-fade-in">
-              <span className="text-muted-foreground">Tempo é Ouro</span>
-              <span className="font-bold">R$ 5,00</span>
-            </div>
-          )}
-          <div className="border-t border-border pt-2 mt-2 flex justify-between items-center">
-            <span className="font-black text-lg">TOTAL</span>
-            <span className="font-black text-2xl text-money">
-              R$ {total.toFixed(2).replace(".", ",")}
+          <div className="inline-block bg-money/20 border border-money/40 rounded-full px-4 py-1 mb-4">
+            <span className="text-money text-xs font-black uppercase tracking-wider">
+              ✓ PARABÉNS, VOCÊ FOI APROVADO
             </span>
           </div>
-        </div>
 
-        {/* CTA */}
-        <button
-          onClick={handleCheckout}
-          disabled={loading}
-          className="w-full gradient-cta text-white font-black text-lg py-6 rounded-2xl shadow-orange animate-pulse-cta active:scale-95 transition-transform mb-4 leading-tight disabled:opacity-70 disabled:animate-none flex items-center justify-center gap-2"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" /> PROCESSANDO...
-            </>
-          ) : (
-            <>SIM, QUERO COMEÇAR A FATURAR HOJE 🚀</>
-          )}
-        </button>
+          <h1 className="text-3xl sm:text-4xl font-black leading-tight mb-4">
+            Você chegou até aqui e já está na frente de{" "}
+            <span className="text-money">98% dos motoristas</span> 🚀
+          </h1>
 
-        {/* Trust badges */}
-        <div className="grid grid-cols-3 gap-2 mb-5">
-          <div className="bg-card rounded-xl p-3 text-center border border-border">
-            <Shield className="w-6 h-6 text-money mx-auto mb-1" />
-            <p className="text-[10px] font-bold leading-tight">Compra Segura</p>
-          </div>
-          <div className="bg-card rounded-xl p-3 text-center border border-border">
-            <Lock className="w-6 h-6 text-money mx-auto mb-1" />
-            <p className="text-[10px] font-bold leading-tight">SSL Criptografado</p>
-          </div>
-          <div className="bg-card rounded-xl p-3 text-center border border-border">
-            <Clock className="w-6 h-6 text-money mx-auto mb-1" />
-            <p className="text-[10px] font-bold leading-tight">7 Dias Garantia</p>
-          </div>
-        </div>
+          <p className="text-foreground/90 text-base mb-3 leading-relaxed">
+            A maioria continua <strong className="text-orange">presa no passado</strong>, rodando 12h
+            por dia e tomando prejuízo todos os dias.
+          </p>
+          <p className="text-foreground/90 text-base mb-6 leading-relaxed">
+            Você está a <strong className="text-money">1 clique</strong> de virar essa chave e fazer
+            no mínimo <strong className="text-money">R$ 2.000 ainda essa semana</strong>.
+          </p>
 
-        {/* Guarantee */}
-        <div className="bg-money/10 border-2 border-money/40 rounded-2xl p-4 mb-5 flex gap-3">
-          <Shield className="w-12 h-12 text-money flex-shrink-0" />
-          <div>
-            <h4 className="font-black text-money mb-1">GARANTIA INCONDICIONAL DE 7 DIAS</h4>
-            <p className="text-xs text-foreground/80 leading-snug">
-              Se em 7 dias você não ver resultado, devolvemos seu dinheiro. Sem perguntas, sem
-              burocracia.
-            </p>
-          </div>
-        </div>
-
-        {/* Mini testimonials */}
-        <h3 className="font-black text-center mb-3 text-sm uppercase tracking-wide text-orange">
-          O que estão dizendo 👇
-        </h3>
-        <div className="space-y-3 mb-5">
-          {[
-            { name: "Marcos – Uber", text: "Em 5 dias já tinha feito R$ 1.700. No 7º dia bati R$ 2.300!" },
-            { name: "Diego – 99 Moto", text: "Pensei que era furada por R$ 7,90… melhor R$ 7 que gastei na vida." },
-            { name: "Paulo – InDrive", text: "Os horários do bônus 'Tempo é Ouro' valem o produto sozinhos!" },
-          ].map((t, i) => (
-            <div key={i} className="bg-card rounded-xl p-3 border border-border">
-              <div className="flex gap-1 mb-1">
-                {Array.from({ length: 5 }).map((_, s) => (
-                  <Star key={s} className="w-3 h-3 fill-orange text-orange" />
-                ))}
-              </div>
-              <p className="text-sm leading-snug mb-1">"{t.text}"</p>
-              <p className="text-xs text-muted-foreground font-bold">— {t.name}</p>
+          <div className="bg-card/60 backdrop-blur border border-orange/30 rounded-2xl p-5 mb-6">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <Sparkles className="w-5 h-5 text-orange" />
+              <span className="text-xs font-bold uppercase text-orange">Acesso Liberado</span>
             </div>
-          ))}
+            <p className="text-sm text-muted-foreground line-through">De R$ 97,00</p>
+            <p className="text-5xl font-black text-money my-1">R$ 7,90</p>
+            <p className="text-xs text-foreground/70">à vista, acesso vitalício</p>
+          </div>
+
+          <p className="text-sm text-foreground/80 mb-3 font-semibold">
+            👇 Clique no botão abaixo e garanta agora mesmo sua estratégia
+          </p>
+
+          <button
+            onClick={goToCheckout}
+            className="w-full gradient-cta text-white font-black text-lg sm:text-xl py-6 rounded-2xl shadow-orange animate-pulse-cta active:scale-95 transition-transform flex items-center justify-center gap-2"
+          >
+            <Rocket className="w-6 h-6" />
+            QUERO FATURAR 2K ESSA SEMANA
+          </button>
+
+          <p className="text-xs text-muted-foreground mt-4">
+            🔒 Pagamento 100% seguro • Garantia de 7 dias
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ============ INITIAL FORM (only WhatsApp) ============
+  return (
+    <div className="min-h-screen gradient-hero px-5 py-8 flex flex-col">
+      <div className="max-w-md w-full mx-auto flex-1 flex flex-col justify-center">
+        <div className="text-center mb-6 animate-fade-in">
+          <div className="inline-block bg-orange/20 border border-orange/40 rounded-full px-3 py-1 mb-4">
+            <span className="text-orange text-xs font-black uppercase tracking-wider">
+              🔥 Última Etapa
+            </span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-black leading-tight mb-3">
+            Falta só <span className="text-orange">1 passo</span> pra liberar seu{" "}
+            <span className="text-money">acesso vitalício</span>
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            Digite seu WhatsApp pra a gente reservar sua vaga e enviar o acesso 👇
+          </p>
         </div>
 
-        {/* Final CTA */}
+        <div className="bg-card rounded-2xl p-5 border-2 border-orange/40 mb-5 animate-fade-in">
+          <label className="block text-xs font-bold uppercase text-orange mb-2 tracking-wide">
+            📲 Seu WhatsApp (com DDD)
+          </label>
+          <input
+            type="tel"
+            inputMode="tel"
+            placeholder="(11) 99999-9999"
+            value={whatsapp}
+            onChange={(e) => setWhatsapp(formatPhone(e.target.value))}
+            className="w-full h-14 px-4 rounded-xl bg-background border-2 border-border text-foreground text-lg font-semibold placeholder:text-muted-foreground focus:outline-none focus:border-orange"
+          />
+        </div>
+
         <button
-          onClick={handleCheckout}
+          onClick={handleContinue}
           disabled={loading}
-          className="w-full gradient-cta text-white font-black text-lg py-6 rounded-2xl shadow-orange active:scale-95 transition-transform leading-tight disabled:opacity-70 flex items-center justify-center gap-2"
+          className="w-full gradient-cta text-white font-black text-lg py-6 rounded-2xl shadow-orange animate-pulse-cta active:scale-95 transition-transform leading-tight disabled:opacity-70 flex items-center justify-center gap-2"
         >
-          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "QUERO MINHA VAGA AGORA 🔥"}
+          CONTINUAR E LIBERAR ACESSO 🚀
         </button>
 
-        <p className="text-center text-xs text-muted-foreground mt-4 mb-2">
-          🚨 Vagas estão acabando — comece ainda essa semana
+        <p className="text-center text-xs text-muted-foreground mt-5">
+          🔒 Seus dados estão 100% seguros
         </p>
       </div>
     </div>
