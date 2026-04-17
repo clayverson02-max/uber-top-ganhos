@@ -1,37 +1,66 @@
-import { useState } from "react";
-import { Play, ChevronRight, Star } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { ChevronRight, Star, Volume2, VolumeX } from "lucide-react";
+import video1 from "@/assets/video-1.mp4";
+import proof1 from "@/assets/proof-1.png";
+import proof2 from "@/assets/proof-2.png";
+import proof3 from "@/assets/proof-3.png";
 
 interface VideosSectionProps {
   onContinue: () => void;
 }
 
-const videos = [
+type Slide =
+  | { type: "video"; src: string; result: string; caption: string; name: string }
+  | { type: "image"; src: string; result: string; caption: string; name: string };
+
+const slides: Slide[] = [
   {
-    name: "Carlos, 38 anos – Uber SP",
-    result: "R$ 2.140 em 6 dias",
-    caption: "Eu tava rodando 14h e ganhando R$ 800 na semana. Apliquei o método e EXPLODIU.",
+    type: "video",
+    src: video1,
+    result: "R$ 440,42 em 1 dia",
+    caption: "22 viagens, faturamento bruto na tela. Aplicando o método na prática.",
+    name: "Motorista real — gravação ao vivo",
   },
   {
-    name: "Rafael – 99 e InDrive RJ",
-    result: "R$ 2.380 líquido em 7 dias",
-    caption: "Achei que era mais um curso. Mas no 3º dia já tava vendo a diferença na conta.",
+    type: "image",
+    src: proof1,
+    result: "R$ 440,42 só HOJE",
+    caption: "22 viagens concluídas em 1 dia. Imagina isso 7 dias seguidos…",
+    name: "Print do app do motorista",
   },
   {
-    name: "Júnior – Moto, BH",
-    result: "R$ 1.980 em 7 dias na moto",
-    caption: "Dobrei meu faturamento sem rodar mais. O segredo tá nos horários e na zona certa.",
+    type: "image",
+    src: proof2,
+    result: "R$ 8.606,11 em 1 semana",
+    caption: "213 viagens em 7 dias. É o método 2K em 7 Dias funcionando.",
+    name: "Resumo semanal Uber",
+  },
+  {
+    type: "image",
+    src: proof3,
+    result: "Faturamento na semana 🔥",
+    caption: "Os números não mentem. Quem aplica, COLHE.",
+    name: "Print de resultado",
   },
 ];
 
 export const VideosSection = ({ onContinue }: VideosSectionProps) => {
   const [current, setCurrent] = useState(0);
+  const [muted, setMuted] = useState(true);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const slide = slides[current];
+
+  useEffect(() => {
+    if (slide.type === "video" && videoRef.current) {
+      videoRef.current.play().catch(() => {});
+    }
+  }, [current, slide.type]);
 
   const next = () => {
-    if (current < videos.length - 1) setCurrent(current + 1);
+    if (current < slides.length - 1) setCurrent(current + 1);
     else onContinue();
   };
-
-  const v = videos[current];
 
   return (
     <div className="min-h-screen gradient-hero px-5 py-8">
@@ -48,28 +77,54 @@ export const VideosSection = ({ onContinue }: VideosSectionProps) => {
           </h2>
         </div>
 
-        {/* Video player */}
+        {/* Media player */}
         <div key={current} className="animate-fade-in">
           <div className="relative aspect-[9/16] bg-black rounded-3xl overflow-hidden shadow-card border-2 border-orange/30">
-            {/* Placeholder for TikTok video */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-deep-blue to-black">
-              <div className="w-20 h-20 rounded-full gradient-orange flex items-center justify-center mb-4 animate-pulse-cta">
-                <Play className="w-10 h-10 text-white ml-1" fill="white" />
-              </div>
-              <p className="text-white/60 text-sm px-6 text-center">
-                [ Espaço pro seu vídeo do TikTok #{current + 1} ]
-              </p>
-            </div>
+            {slide.type === "video" ? (
+              <>
+                <video
+                  ref={videoRef}
+                  src={slide.src}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  autoPlay
+                  loop
+                  muted={muted}
+                  playsInline
+                />
+                <button
+                  onClick={() => setMuted(!muted)}
+                  className="absolute top-3 right-3 z-10 w-11 h-11 rounded-full bg-black/60 backdrop-blur flex items-center justify-center border border-white/20"
+                  aria-label={muted ? "Ativar som" : "Mutar"}
+                >
+                  {muted ? (
+                    <VolumeX className="w-5 h-5 text-white" />
+                  ) : (
+                    <Volume2 className="w-5 h-5 text-white" />
+                  )}
+                </button>
+                {muted && (
+                  <div className="absolute top-16 right-3 bg-orange text-white text-[10px] font-bold px-2 py-1 rounded-md animate-pulse">
+                    Toque pra ouvir 👆
+                  </div>
+                )}
+              </>
+            ) : (
+              <img
+                src={slide.src}
+                alt={slide.name}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            )}
 
             {/* Caption overlay */}
-            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/80 to-transparent">
+            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/85 to-transparent">
               <div className="bg-money text-white text-center py-2 px-3 rounded-xl font-black text-lg mb-2 shadow-money">
-                {v.result}
+                {slide.result}
               </div>
               <p className="text-white text-base font-bold leading-tight text-center">
-                "{v.caption}"
+                "{slide.caption}"
               </p>
-              <p className="text-white/70 text-xs text-center mt-2">— {v.name}</p>
+              <p className="text-white/70 text-xs text-center mt-2">— {slide.name}</p>
             </div>
           </div>
 
@@ -82,12 +137,14 @@ export const VideosSection = ({ onContinue }: VideosSectionProps) => {
 
           {/* Counter dots */}
           <div className="flex justify-center gap-2 mt-3">
-            {videos.map((_, i) => (
-              <div
+            {slides.map((_, i) => (
+              <button
                 key={i}
+                onClick={() => setCurrent(i)}
                 className={`h-2 rounded-full transition-all ${
                   i === current ? "w-8 bg-orange" : "w-2 bg-muted"
                 }`}
+                aria-label={`Ir para slide ${i + 1}`}
               />
             ))}
           </div>
@@ -98,9 +155,9 @@ export const VideosSection = ({ onContinue }: VideosSectionProps) => {
           onClick={next}
           className="w-full mt-6 gradient-cta text-white font-black text-lg py-5 rounded-2xl shadow-orange flex items-center justify-center gap-2 animate-pulse-cta active:scale-95 transition-transform"
         >
-          {current < videos.length - 1 ? (
+          {current < slides.length - 1 ? (
             <>
-              PRÓXIMO VÍDEO <ChevronRight className="w-6 h-6" />
+              PRÓXIMO <ChevronRight className="w-6 h-6" />
             </>
           ) : (
             <>
@@ -116,7 +173,7 @@ export const VideosSection = ({ onContinue }: VideosSectionProps) => {
           <span className="text-money font-black">R$ 2.000 líquido em 7 dias</span>.
         </p>
         <p className="text-center text-muted-foreground text-sm mt-2">
-          Assista e veja como é possível 👇
+          Veja os prints e o vídeo — não tem como duvidar 👇
         </p>
       </div>
     </div>
