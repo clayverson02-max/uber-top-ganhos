@@ -57,6 +57,40 @@ export const VideosSection = ({ onContinue }: VideosSectionProps) => {
     }
   }, [current, slide.type]);
 
+  // Try to unmute ASAP. The user already clicked through the quiz, so most
+  // browsers will accept it. Otherwise unmute on the next user interaction.
+  useEffect(() => {
+    const unmuteNow = () => {
+      const v = videoRef.current;
+      if (!v) return Promise.reject();
+      v.muted = false;
+      v.volume = 1;
+      return v.play().then(() => setMuted(false));
+    };
+
+    const onInteract = () => {
+      unmuteNow().catch(() => {});
+      window.removeEventListener("pointerdown", onInteract);
+      window.removeEventListener("touchstart", onInteract);
+      window.removeEventListener("keydown", onInteract);
+    };
+
+    const t = setTimeout(() => {
+      unmuteNow().catch(() => {
+        window.addEventListener("pointerdown", onInteract, { once: true });
+        window.addEventListener("touchstart", onInteract, { once: true });
+        window.addEventListener("keydown", onInteract, { once: true });
+      });
+    }, 150);
+
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("pointerdown", onInteract);
+      window.removeEventListener("touchstart", onInteract);
+      window.removeEventListener("keydown", onInteract);
+    };
+  }, []);
+
   const next = () => {
     if (current < slides.length - 1) setCurrent(current + 1);
     else onContinue();
