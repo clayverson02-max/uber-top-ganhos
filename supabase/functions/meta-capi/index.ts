@@ -46,9 +46,16 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Pull IP from request headers (client never sends its real IP)
+    const ip =
+      client_ip ||
+      req.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
+      req.headers.get("cf-connecting-ip") ||
+      undefined;
+
     const user_data: Record<string, unknown> = {
       client_user_agent: user_agent,
-      client_ip_address: client_ip,
+      client_ip_address: ip,
     };
     if (fbp) user_data.fbp = fbp;
     if (fbc) user_data.fbc = fbc;
