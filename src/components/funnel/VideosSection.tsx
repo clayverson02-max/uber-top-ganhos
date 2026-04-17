@@ -112,7 +112,7 @@ export const VideosSection = ({ onContinue }: VideosSectionProps) => {
               <img
                 src={slide.src}
                 alt={slide.name}
-                className="absolute inset-0 w-full h-full object-cover"
+                className="absolute inset-0 w-full h-full object-contain bg-black"
               />
             )}
 
