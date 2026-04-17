@@ -1,10 +1,29 @@
 import { useState, useEffect } from "react";
-import { Check, Lock, Shield, Clock, Star, Zap } from "lucide-react";
+import { Check, Lock, Shield, Clock, Star, Zap, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { trackEvent } from "@/lib/pixel";
+import { toast } from "@/hooks/use-toast";
+
+const KIWIFY_URL = "https://pay.kiwify.com.br/RRZgaP9";
+const MAIN_PRICE = 7.9;
+const BUMP_PRICE = 5;
 
 export const Checkout = () => {
   const [bumpChecked, setBumpChecked] = useState(true);
   const [minutes, setMinutes] = useState(14);
   const [seconds, setSeconds] = useState(59);
+  const [name, setName] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // Fire ViewContent + InitiateCheckout view on mount
+    trackEvent("ViewContent", {
+      content_name: "2K em 7 Dias Apps",
+      value: MAIN_PRICE,
+    });
+  }, []);
 
   useEffect(() => {
     const t = setInterval(() => {
@@ -17,11 +36,72 @@ export const Checkout = () => {
     return () => clearInterval(t);
   }, []);
 
-  const total = 7.9 + (bumpChecked ? 3 : 0);
+  const total = MAIN_PRICE + (bumpChecked ? BUMP_PRICE : 0);
 
-  const handleCheckout = () => {
-    // Aqui vai entrar o link do checkout (Kiwify/Hotmart) depois
-    alert("👉 Aqui entra o link do checkout depois que você cadastrar o produto!");
+  const formatPhone = (v: string) => {
+    const d = v.replace(/\D/g, "").slice(0, 11);
+    if (d.length <= 2) return d;
+    if (d.length <= 7) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+    return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  };
+
+  const handleCheckout = async () => {
+    if (loading) return;
+
+    // Validation
+    if (name.trim().length < 2) {
+      toast({ title: "Preencha seu nome", variant: "destructive" });
+      return;
+    }
+    const phoneDigits = whatsapp.replace(/\D/g, "");
+    if (phoneDigits.length < 10) {
+      toast({ title: "WhatsApp inválido", description: "Digite com DDD", variant: "destructive" });
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast({ title: "Email inválido", variant: "destructive" });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // 1) Save lead
+      const { error } = await supabase.from("leads").insert({
+        name: name.trim(),
+        whatsapp: phoneDigits,
+        email: email.trim().toLowerCase(),
+        order_bump_active: bumpChecked,
+        total_price: total,
+        user_agent: navigator.userAgent,
+        source: "checkout",
+      });
+      if (error) throw error;
+
+      // 2) Fire Lead + InitiateCheckout (Pixel + CAPI deduped)
+      await Promise.all([
+        trackEvent("Lead", {
+          value: total,
+          content_name: "Lead Capturado",
+          email,
+          phone: phoneDigits,
+          first_name: name.split(" ")[0],
+        }),
+        trackEvent("InitiateCheckout", {
+          value: total,
+          content_name: bumpChecked ? "2K em 7 Dias + Tempo é Ouro" : "2K em 7 Dias",
+          email,
+          phone: phoneDigits,
+          first_name: name.split(" ")[0],
+        }),
+      ]);
+
+      // 3) Redirect to Kiwify
+      window.location.href = KIWIFY_URL;
+    } catch (e) {
+      console.error(e);
+      toast({ title: "Algo deu errado", description: "Tente novamente", variant: "destructive" });
+      setLoading(false);
+    }
   };
 
   return (
@@ -100,7 +180,7 @@ export const Checkout = () => {
             <div className="flex-1">
               <div className="flex items-center justify-between gap-2 mb-1">
                 <h4 className="font-black text-base">SIM! Quero o "Tempo é Ouro"</h4>
-                <span className="font-black text-money text-base whitespace-nowrap">+ R$ 3,00</span>
+                <span className="font-black text-money text-base whitespace-nowrap">+ R$ 5,00</span>
               </div>
               <p className="text-xs text-muted-foreground leading-snug">
                 Aprenda os <strong className="text-foreground">3 horários secretos</strong> que
@@ -111,6 +191,41 @@ export const Checkout = () => {
           </div>
         </button>
 
+        {/* Lead capture form */}
+        <div className="bg-card rounded-2xl p-4 mb-3 border-2 border-orange/40">
+          <h3 className="font-black text-base mb-1">📲 Preencha pra liberar sua vaga:</h3>
+          <p className="text-xs text-muted-foreground mb-3">
+            Vamos enviar o acesso no seu WhatsApp + Email assim que confirmarmos o pagamento.
+          </p>
+          <div className="space-y-2">
+            <input
+              type="text"
+              placeholder="Seu nome completo"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={100}
+              className="w-full h-12 px-4 rounded-xl bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-orange text-base"
+            />
+            <input
+              type="tel"
+              inputMode="tel"
+              placeholder="WhatsApp com DDD"
+              value={whatsapp}
+              onChange={(e) => setWhatsapp(formatPhone(e.target.value))}
+              className="w-full h-12 px-4 rounded-xl bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-orange text-base"
+            />
+            <input
+              type="email"
+              inputMode="email"
+              placeholder="Seu melhor email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              maxLength={255}
+              className="w-full h-12 px-4 rounded-xl bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-orange text-base"
+            />
+          </div>
+        </div>
+
         {/* Total */}
         <div className="bg-card rounded-2xl p-4 mb-4 border border-border">
           <div className="flex justify-between items-center mb-2 text-sm">
@@ -120,7 +235,7 @@ export const Checkout = () => {
           {bumpChecked && (
             <div className="flex justify-between items-center mb-2 text-sm animate-fade-in">
               <span className="text-muted-foreground">Tempo é Ouro</span>
-              <span className="font-bold">R$ 3,00</span>
+              <span className="font-bold">R$ 5,00</span>
             </div>
           )}
           <div className="border-t border-border pt-2 mt-2 flex justify-between items-center">
@@ -134,9 +249,16 @@ export const Checkout = () => {
         {/* CTA */}
         <button
           onClick={handleCheckout}
-          className="w-full gradient-cta text-white font-black text-lg py-6 rounded-2xl shadow-orange animate-pulse-cta active:scale-95 transition-transform mb-4 leading-tight"
+          disabled={loading}
+          className="w-full gradient-cta text-white font-black text-lg py-6 rounded-2xl shadow-orange animate-pulse-cta active:scale-95 transition-transform mb-4 leading-tight disabled:opacity-70 disabled:animate-none flex items-center justify-center gap-2"
         >
-          SIM, QUERO COMEÇAR A FATURAR HOJE 🚀
+          {loading ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" /> PROCESSANDO...
+            </>
+          ) : (
+            <>SIM, QUERO COMEÇAR A FATURAR HOJE 🚀</>
+          )}
         </button>
 
         {/* Trust badges */}
@@ -173,18 +295,9 @@ export const Checkout = () => {
         </h3>
         <div className="space-y-3 mb-5">
           {[
-            {
-              name: "Marcos – Uber",
-              text: "Em 5 dias já tinha feito R$ 1.700. No 7º dia bati R$ 2.300!",
-            },
-            {
-              name: "Diego – 99 Moto",
-              text: "Pensei que era furada por R$ 7,90… melhor R$ 7 que gastei na vida.",
-            },
-            {
-              name: "Paulo – InDrive",
-              text: "Os horários do bônus 'Tempo é Ouro' valem o produto sozinhos!",
-            },
+            { name: "Marcos – Uber", text: "Em 5 dias já tinha feito R$ 1.700. No 7º dia bati R$ 2.300!" },
+            { name: "Diego – 99 Moto", text: "Pensei que era furada por R$ 7,90… melhor R$ 7 que gastei na vida." },
+            { name: "Paulo – InDrive", text: "Os horários do bônus 'Tempo é Ouro' valem o produto sozinhos!" },
           ].map((t, i) => (
             <div key={i} className="bg-card rounded-xl p-3 border border-border">
               <div className="flex gap-1 mb-1">
@@ -201,9 +314,10 @@ export const Checkout = () => {
         {/* Final CTA */}
         <button
           onClick={handleCheckout}
-          className="w-full gradient-cta text-white font-black text-lg py-6 rounded-2xl shadow-orange active:scale-95 transition-transform leading-tight"
+          disabled={loading}
+          className="w-full gradient-cta text-white font-black text-lg py-6 rounded-2xl shadow-orange active:scale-95 transition-transform leading-tight disabled:opacity-70 flex items-center justify-center gap-2"
         >
-          QUERO MINHA VAGA AGORA 🔥
+          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "QUERO MINHA VAGA AGORA 🔥"}
         </button>
 
         <p className="text-center text-xs text-muted-foreground mt-4 mb-2">
