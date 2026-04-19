@@ -135,9 +135,9 @@ export const VideosSection = ({ onContinue }: VideosSectionProps) => {
                   src={slide.src}
                   className="absolute inset-0 w-full h-full object-cover"
                   autoPlay
-                  loop
                   muted={muted}
                   playsInline
+                  onEnded={handleVideoEnded}
                 />
                 <button
                   onClick={() => setMuted(!muted)}
