@@ -57,6 +57,20 @@ export const VideosSection = ({ onContinue }: VideosSectionProps) => {
     }
   }, [current, slide.type]);
 
+  // Auto-advance: video advances on end, images after 10s
+  useEffect(() => {
+    if (slide.type === "image") {
+      const t = setTimeout(() => {
+        setCurrent((c) => (c < slides.length - 1 ? c + 1 : c));
+      }, 10000);
+      return () => clearTimeout(t);
+    }
+  }, [current, slide.type]);
+
+  const handleVideoEnded = () => {
+    setCurrent((c) => (c < slides.length - 1 ? c + 1 : c));
+  };
+
   // Try to unmute ASAP. The user already clicked through the quiz, so most
   // browsers will accept it. Otherwise unmute on the next user interaction.
   useEffect(() => {
@@ -121,9 +135,9 @@ export const VideosSection = ({ onContinue }: VideosSectionProps) => {
                   src={slide.src}
                   className="absolute inset-0 w-full h-full object-cover"
                   autoPlay
-                  loop
                   muted={muted}
                   playsInline
+                  onEnded={handleVideoEnded}
                 />
                 <button
                   onClick={() => setMuted(!muted)}
