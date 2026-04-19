@@ -5,7 +5,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const PIXEL_ID = "1277687807088988";
+const PIXEL_ID = "1018641777369545";
 const ACCESS_TOKEN = Deno.env.get("META_CAPI_ACCESS_TOKEN")!;
 
 async function sha256(value: string): Promise<string> {
