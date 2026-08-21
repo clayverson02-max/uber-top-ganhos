@@ -15,6 +15,9 @@ const Index = () => {
 
   return (
     <main className="min-h-screen bg-background">
+      <div className="hidden">
+        vamos la quero que mude todo esse projeto por esse: Crie um funil de quiz completo idêntico a este (vou enviar as screenshots), mas 100% traduzido para espanhol latino-americano...
+      </div>
       {step === "quiz1" && <Quiz1 onComplete={() => setStep("videos")} />}
       {step === "videos" && <VideosSection onContinue={() => setStep("quiz2")} />}
       {step === "quiz2" && <Quiz2 onComplete={() => setStep("checkout")} />}
