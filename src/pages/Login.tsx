@@ -9,7 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
-const COMPANY_EMAIL = (import.meta.env.VITE_COMPANY_LOGIN_EMAIL || "clayverson02@gmail.com").trim().toLowerCase();
+const ADMIN_EMAIL = (import.meta.env.VITE_COMPANY_LOGIN_EMAIL || "clayverson02@gmail.com").trim().toLowerCase();
+const STAFF_EMAIL = (import.meta.env.VITE_COMPANY_STAFF_EMAIL || "clayverson06@gmail.com").trim().toLowerCase();
+const ALLOWED_EMAILS = new Set([ADMIN_EMAIL, STAFF_EMAIL]);
 const schema = z.object({
   email: z.string().trim().email("E-mail inválido").max(255),
   password: z.string().min(8, "Senha com no mínimo 8 caracteres").max(72),
@@ -20,7 +22,7 @@ type Mode = "login" | "forgot";
 export default function Login() {
   const { user, loading } = useAuth();
   const [mode, setMode] = useState<Mode>("login");
-  const [email, setEmail] = useState(COMPANY_EMAIL);
+  const [email, setEmail] = useState(ADMIN_EMAIL);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -28,8 +30,8 @@ export default function Login() {
   if (!loading && user) return <Navigate to="/" replace />;
 
   const validateCompanyEmail = (value: string) => {
-    if (value.trim().toLowerCase() !== COMPANY_EMAIL) {
-      setError("Use o e-mail único da empresa para entrar.");
+    if (!ALLOWED_EMAILS.has(value.trim().toLowerCase())) {
+      setError("Use um e-mail autorizado da Conta Amiga.");
       return false;
     }
     return true;
@@ -45,7 +47,7 @@ export default function Login() {
 
     if (mode === "forgot") {
       setBusy(true);
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(COMPANY_EMAIL, {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(parsedEmail.data, {
         redirectTo: window.location.origin + "/reset-password",
       });
       setBusy(false);
@@ -55,7 +57,7 @@ export default function Login() {
       return;
     }
 
-    const parsed = schema.safeParse({ email: COMPANY_EMAIL, password });
+    const parsed = schema.safeParse({ email: parsedEmail.data, password });
     if (!parsed.success) return setError(parsed.error.issues[0].message);
 
     setBusy(true);
@@ -85,13 +87,12 @@ export default function Login() {
 
         <form onSubmit={submit} className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="email">E-mail da empresa</Label>
+            <Label htmlFor="email">E-mail autorizado</Label>
             <Input
               id="email"
               type="email"
               autoComplete="email"
               value={email}
-              readOnly
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
