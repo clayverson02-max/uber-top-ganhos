@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.15"
+    PostgrestVersion: "14.18"
   }
   public: {
     Tables: {
@@ -53,6 +53,20 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "bonuses_confirmed_by_fkey"
+            columns: ["confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bonuses_responsible_id_fkey"
+            columns: ["responsible_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       client_documents: {
@@ -76,7 +90,7 @@ export type Database = {
           is_current?: boolean
           status?: Database["public"]["Enums"]["doc_status"]
           uploaded_at?: string
-          uploaded_by?: string
+          uploaded_by: string
         }
         Update: {
           client_id?: string
@@ -95,6 +109,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_documents_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -132,6 +153,52 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "client_history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_messages: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          message: string
+          sender_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          message: string
+          sender_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          message?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_messages_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       clients: {
@@ -156,9 +223,9 @@ export type Database = {
         }
         Insert: {
           avg_bill?: number | null
-          code?: number
+          code?: never
           created_at?: string
-          created_by?: string
+          created_by: string
           deleted_at?: string | null
           email: string
           full_name: string
@@ -175,7 +242,7 @@ export type Database = {
         }
         Update: {
           avg_bill?: number | null
-          code?: number
+          code?: never
           created_at?: string
           created_by?: string
           deleted_at?: string | null
@@ -192,7 +259,22 @@ export type Database = {
           updated_at?: string
           whatsapp?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "clients_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clients_responsible_id_fkey"
+            columns: ["responsible_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       leads: {
         Row: {
@@ -253,7 +335,7 @@ export type Database = {
           percent: number
           receipt_status: string
           reference_month: string
-          revenue: number | null
+          revenue: number
         }
         Insert: {
           bill_amount: number
@@ -265,7 +347,7 @@ export type Database = {
           percent?: number
           receipt_status?: string
           reference_month: string
-          revenue?: number | null
+          revenue?: number
         }
         Update: {
           bill_amount?: number
@@ -277,7 +359,7 @@ export type Database = {
           percent?: number
           receipt_status?: string
           reference_month?: string
-          revenue?: number | null
+          revenue?: number
         }
         Relationships: [
           {
@@ -336,7 +418,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      admin_exists: { Args: never; Returns: boolean }
       can_access_client: { Args: { _client: string }; Returns: boolean }
       find_duplicates: {
         Args: { _email: string; _exclude?: string; _whatsapp: string }
@@ -359,7 +440,7 @@ export type Database = {
       is_member: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "equipe"
+      app_role: "admin" | "equipe" | "interno"
       client_status:
         | "novo"
         | "primeiro_contato"
@@ -504,7 +585,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "equipe"],
+      app_role: ["admin", "equipe", "interno"],
       client_status: [
         "novo",
         "primeiro_contato",
