@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, FileText, Loader2 } from "lucide-react";
@@ -37,6 +37,7 @@ export default function NewClient() {
   const [busy, setBusy] = useState(false);
   const [success, setSuccess] = useState(false);
   const [formKey, setFormKey] = useState(0);
+  const [createdClientId, setCreatedClientId] = useState<string | null>(null);
 
   const set = (key: keyof typeof initialForm, value: string) =>
     setF((previous) => ({ ...previous, [key]: value }));
@@ -44,6 +45,7 @@ export default function NewClient() {
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setSuccess(false);
+    setCreatedClientId(null);
 
     const parsed = schema.safeParse(f);
     const nextErrors: Record<string, string> = {};
@@ -99,6 +101,7 @@ export default function NewClient() {
       toast.success("Cliente ativo cadastrado com bonificação de R$ 25,00.");
       nav(`/clientes/${client.id}`);
     } else {
+      setCreatedClientId(client.id);
       setSuccess(true);
       toast.success("Cliente ativo cadastrado com sucesso.");
     }
@@ -122,7 +125,14 @@ export default function NewClient() {
             {isAdmin ? (
               <p>Cliente ativo, bonificação de R$ 25,00 registrada e fatura enviada.</p>
             ) : (
-              <p>Cliente ativo e fatura enviada com sucesso.</p>
+              <>
+                <p>Cliente ativo e fatura enviada com sucesso.</p>
+                {createdClientId && (
+                  <Button asChild variant="outline" size="sm" className="mt-3">
+                    <Link to={`/clientes/${createdClientId}`}>Abrir conversa do cadastro</Link>
+                  </Button>
+                )}
+              </>
             )}
           </div>
         </div>
