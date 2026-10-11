@@ -3,9 +3,9 @@ import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import type { Profile } from "@/lib/crm";
 
-type Role = "admin" | "equipe" | null;
-type Ctx = { user: User | null; profile: Profile | null; role: Role; loading: boolean; isAdmin: boolean; signOut: () => Promise<void> };
-const AuthCtx = createContext<Ctx>({ user: null, profile: null, role: null, loading: true, isAdmin: false, signOut: async () => {} });
+type Role = "admin" | "interno" | "equipe" | null;
+type Ctx = { user: User | null; profile: Profile | null; role: Role; loading: boolean; isAdmin: boolean; isInternal: boolean; signOut: () => Promise<void> };
+const AuthCtx = createContext<Ctx>({ user: null, profile: null, role: null, loading: true, isAdmin: false, isInternal: false, signOut: async () => {} });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -23,7 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ]);
       setProfile(p ?? null);
       const roles = (r ?? []).map((x) => x.role);
-      setRole(roles.includes("admin") ? "admin" : roles.includes("equipe") ? "equipe" : null);
+      setRole(roles.includes("admin") ? "admin" : roles.includes("interno") ? "interno" : roles.includes("equipe") ? "equipe" : null);
       setLoading(false);
     };
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
@@ -34,7 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthCtx.Provider value={{ user, profile, role, loading, isAdmin: role === "admin" && !!profile?.active,
+    <AuthCtx.Provider value={{ user, profile, role, loading, isAdmin: role === "admin" && !!profile?.active, isInternal: role === "interno" && !!profile?.active,
       signOut: async () => { await supabase.auth.signOut(); } }}>
       {children}
     </AuthCtx.Provider>
