@@ -19,7 +19,7 @@ const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 30
 
 const Home = () => {
   const { isAdmin } = useAuth();
-  return isAdmin ? <Dashboard /> : <Navigate to="/clientes" replace />;
+  return isAdmin ? <Dashboard /> : <Navigate to="/novo" replace />;
 };
 
 const App = () => (
@@ -39,10 +39,10 @@ const App = () => (
 
             <Route element={<AppLayout />}>
               <Route path="/" element={<Home />} />
-              <Route path="/clientes" element={<Clients />} />
-              <Route path="/clientes/:id" element={<ClientDetail />} />
+              <Route path="/clientes" element={<AdminOnly><Clients /></AdminOnly>} />
+              <Route path="/clientes/:id" element={<AdminOnly><ClientDetail /></AdminOnly>} />
               <Route path="/novo" element={<NewClient />} />
-              <Route path="/remarketing" element={<Remarketing />} />
+              <Route path="/remarketing" element={<AdminOnly><Remarketing /></AdminOnly>} />
               <Route path="/financeiro" element={<AdminOnly><Finance /></AdminOnly>} />
               <Route path="/usuarios" element={<AdminOnly><UsersPage /></AdminOnly>} />
             </Route>
