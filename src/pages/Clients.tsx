@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { LayoutGrid, List, Plus } from "lucide-react";
 import { useClients, useDocs, useProfiles } from "@/hooks/useCrmData";
+import { useAuth } from "@/hooks/useAuth";
 import { DOC_TYPES, STATUSES, ORIGINS, brl, calcRevenue, fmtDate, fmtWhatsapp, statusColor, pendencies } from "@/lib/crm";
 import { StatusBadge } from "@/components/crm/StatusBadge";
 import { Empty, Loading, PageHeader } from "@/components/crm/States";
@@ -13,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 const PER = 20;
 
 export default function Clients() {
+  const { isAdmin } = useAuth();
   const { data: clients, isLoading } = useClients();
   const { data: docs = [] } = useDocs();
   const { data: profiles = [] } = useProfiles();
@@ -105,7 +107,7 @@ export default function Clients() {
                 <div key={c.id} onClick={() => nav(`/clientes/${c.id}`)} className="rounded-xl border bg-card p-4">
                   <div className="mb-1 flex items-start justify-between gap-2"><p className="font-semibold">{c.full_name}</p><StatusBadge status={c.status} /></div>
                   <p className="text-sm text-muted-foreground">{fmtWhatsapp(c.whatsapp)} · {c.email}</p>
-                  <p className="mt-1 text-xs">{ORIGINS[c.origin as keyof typeof ORIGINS]} · {pname(c.responsible_id)} · Fatura {brl(c.avg_bill)} · 4% {brl(calcRevenue(c.avg_bill))}</p>
+                  <p className="mt-1 text-xs">{ORIGINS[c.origin as keyof typeof ORIGINS]} · {pname(c.responsible_id)} · Fatura {brl(c.avg_bill)}{isAdmin && <> · 4% {brl(calcRevenue(c.avg_bill))}</>}</p>
                   <div className="mt-3"><WhatsappActions whatsapp={c.whatsapp} /></div>
                 </div>
               ))}
@@ -113,7 +115,7 @@ export default function Clients() {
             <div className="hidden overflow-x-auto rounded-xl border bg-card md:block">
               <table className="w-full text-sm">
                 <thead className="bg-muted/60 text-left text-xs uppercase text-muted-foreground">
-                  <tr>{["Nome", "WhatsApp", "E-mail", "Origem", "Status", "Responsável", "Fatura média", "Receita 4%", "Docs", "Cadastro", "Atualização"].map((h) => <th key={h} className="px-3 py-2.5 font-semibold">{h}</th>)}</tr>
+                  <tr>{["Nome", "WhatsApp", "E-mail", "Origem", "Status", "Responsável", "Fatura média", ...(isAdmin ? ["Receita 4%"] : []), "Docs", "Cadastro", "Atualização"].map((h) => <th key={h} className="px-3 py-2.5 font-semibold">{h}</th>)}</tr>
                 </thead>
                 <tbody>
                   {shown.map((c) => (
@@ -125,7 +127,7 @@ export default function Clients() {
                       <td className="px-3 py-2.5"><StatusBadge status={c.status} /></td>
                       <td className="px-3 py-2.5">{pname(c.responsible_id)}</td>
                       <td className="whitespace-nowrap px-3 py-2.5">{brl(c.avg_bill)}</td>
-                      <td className="whitespace-nowrap px-3 py-2.5 text-success">{brl(calcRevenue(c.avg_bill))}</td>
+                      {isAdmin && <td className="whitespace-nowrap px-3 py-2.5 text-success">{brl(calcRevenue(c.avg_bill))}</td>}
                       <td className="px-3 py-2.5">{docSummary(c.id)}</td>
                       <td className="px-3 py-2.5">{fmtDate(c.created_at)}</td>
                       <td className="px-3 py-2.5">{fmtDate(c.updated_at)}</td>
