@@ -119,7 +119,11 @@ export default function NewClient() {
           <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
           <div>
             <p className="font-bold">Cadastro concluído</p>
-            <p>Cliente ativo, bonificação de R$ 25,00 registrada e fatura enviada.</p>
+            {isAdmin ? (
+              <p>Cliente ativo, bonificação de R$ 25,00 registrada e fatura enviada.</p>
+            ) : (
+              <p>Cliente ativo e fatura enviada com sucesso.</p>
+            )}
           </div>
         </div>
       )}
@@ -129,8 +133,12 @@ export default function NewClient() {
           <p className="font-bold">Cadastro rápido</p>
           <p className="mt-1 text-muted-foreground">
             O cliente entra como <strong className="text-foreground">ativo</strong> automaticamente.
-            A bonificação de <strong className="text-foreground">R$ 25,00</strong> é registrada no cadastro.
           </p>
+          {isAdmin && (
+            <p className="mt-1 text-muted-foreground">
+              A bonificação de <strong className="text-foreground">R$ 25,00</strong> é registrada no cadastro.
+            </p>
+          )}
         </div>
 
         <div className="space-y-1.5">
@@ -170,10 +178,12 @@ export default function NewClient() {
             placeholder="Ex.: 500,00"
           />
           {errors.avg_bill && <p className="text-xs text-destructive">{errors.avg_bill}</p>}
-          <div className="rounded-lg bg-muted/60 p-3 text-sm">
-            <p>Recorrência estimada: <strong>{brl(recurrence)}</strong> (4% da fatura)</p>
-            <p className="mt-1 text-xs text-muted-foreground">O cálculo considera o valor informado acima.</p>
-          </div>
+          {isAdmin && (
+            <div className="rounded-lg bg-muted/60 p-3 text-sm">
+              <p>Recorrência estimada: <strong>{brl(recurrence)}</strong> (4% da fatura)</p>
+              <p className="mt-1 text-xs text-muted-foreground">O cálculo considera o valor informado acima.</p>
+            </div>
+          )}
         </div>
 
         <div className="space-y-1.5">
