@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, FileText, Upload, Eye } from "lucide-react";
+import { ArrowLeft, FileText, Upload, Eye, MessageCircle, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfiles } from "@/hooks/useCrmData";
@@ -20,10 +20,11 @@ import { toast } from "sonner";
 
 export default function ClientDetail() {
   const { id } = useParams();
-  const { user, isAdmin } = useAuth();
+  const { user, profile, isAdmin, isInternal } = useAuth();
   const qc = useQueryClient();
   const { data: profiles = [] } = useProfiles();
   const pname = (u: string | null) => profiles.find((p) => p.id === u)?.full_name || "—";
+  const canManage = isAdmin || isInternal;
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["client", id],
@@ -38,8 +39,25 @@ export default function ClientDetail() {
       return { client: c.data, docs: d.data ?? [], history: h.data ?? [], bonus: b.data, revenues: r.data ?? [] };
     },
   });
+  const { data: messages = [], isLoading: messagesLoading, refetch: refetchMessages } = useQuery({
+    queryKey: ["client-messages", id],
+    queryFn: async () => {
+      const { data: rows, error } = await supabase
+        .from("client_messages")
+        .select("*")
+        .eq("client_id", id!)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return rows;
+    },
+    enabled: !!id,
+    refetchInterval: 5000,
+  });
+
   const [f, setF] = useState<Record<string, string>>({});
   const [contactNote, setContactNote] = useState("");
+  const [message, setMessage] = useState("");
+  const [sendingMessage, setSendingMessage] = useState(false);
   useEffect(() => {
     if (data?.client) {
       const c = data.client;
@@ -51,8 +69,29 @@ export default function ClientDetail() {
   if (isLoading) return <Loading />;
   if (!data?.client) return <Empty title="Cliente não encontrado ou sem permissão" />;
   const c = data.client;
-  const reload = () => { refetch(); qc.invalidateQueries({ queryKey: ["clients"] }); qc.invalidateQueries({ queryKey: ["docs"] }); qc.invalidateQueries({ queryKey: ["bonuses"] }); };
+  const reload = () => {
+    refetch();
+    refetchMessages();
+    qc.invalidateQueries({ queryKey: ["clients"] });
+    qc.invalidateQueries({ queryKey: ["docs"] });
+    qc.invalidateQueries({ queryKey: ["bonuses"] });
+  };
   const log = (kind: string, description: string) => supabase.from("client_history").insert({ client_id: c.id, user_id: user!.id, kind, description });
+  const sendMessage = async (event: FormEvent) => {
+    event.preventDefault();
+    const text = message.trim();
+    if (!text || !user) return;
+    setSendingMessage(true);
+    const { error } = await supabase.from("client_messages").insert({
+      client_id: c.id,
+      sender_id: user.id,
+      message: text,
+    });
+    setSendingMessage(false);
+    if (error) return toast.error("Não foi possível enviar a mensagem: " + error.message);
+    setMessage("");
+    refetchMessages();
+  };
 
   const setStatus = async (s: ClientStatus) => {
     const { error } = await supabase.from("clients").update({ status: s }).eq("id", c.id);
@@ -62,14 +101,15 @@ export default function ClientDetail() {
   const save = async () => {
     const wa = normalizeWhatsapp(f.whatsapp);
     if (f.full_name.trim().length < 3) return toast.error("Nome inválido");
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email.trim())) return toast.error("E-mail inválido");
+    const email = f.email.trim().toLowerCase();
+    if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return toast.error("E-mail inválido");
     if (!/^55\d{10,11}$/.test(wa)) return toast.error("WhatsApp inválido");
     const bill = f.avg_bill ? Number(f.avg_bill.replace(",", ".")) : null;
     if (bill != null && (isNaN(bill) || bill < 0)) return toast.error("Valor da fatura inválido");
     const { data: dups } = await supabase.rpc("find_duplicates", { _whatsapp: wa, _email: f.email.trim(), _exclude: c.id });
     if (dups?.length) toast.warning(`Atenção: existe registro semelhante (#${dups[0].code} ${dups[0].full_name})`);
     const { error } = await supabase.from("clients").update({
-      full_name: f.full_name.trim(), email: f.email.trim().toLowerCase(), whatsapp: wa, origin: f.origin, avg_bill: bill,
+      full_name: f.full_name.trim(), email, whatsapp: wa, origin: f.origin, avg_bill: bill,
       notes: f.notes.trim() || null, last_contact_at: f.last_contact_at || null, next_contact_at: f.next_contact_at || null, responsible_id: f.responsible_id || null,
     }).eq("id", c.id);
     if (error) return toast.error(error.message);
@@ -128,19 +168,33 @@ export default function ClientDetail() {
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-xl border bg-card p-4"><p className="text-xs text-muted-foreground">Valor médio da fatura</p><p className="text-xl font-bold">{brl(c.avg_bill)}</p></div>
-        <div className="rounded-xl border bg-card p-4"><p className="text-xs text-muted-foreground">Receita bruta mensal estimada (4%)</p><p className="text-xl font-bold text-success">{brl(calcRevenue(c.avg_bill))}</p>
-          <p className="text-xs text-muted-foreground">{c.avg_bill != null ? `${brl(c.avg_bill)} × 0,04` : "Informe o valor da fatura"}</p></div>
-        <div className="rounded-xl border bg-card p-4"><p className="text-xs text-muted-foreground">Bonificação única</p>
-          {data.bonus ? (<><p className="text-xl font-bold">{brl(data.bonus.amount)}</p><p className="text-xs">{data.bonus.status === "confirmada" ? `Confirmada em ${fmtDate(data.bonus.confirmed_at)}` : "Pendente"} · gerada {fmtDate(data.bonus.created_at)}</p>
-            {isAdmin && data.bonus.status === "pendente" && <Button size="sm" className="mt-2" onClick={confirmBonus}>Confirmar bonificação</Button>}</>)
-            : <p className="text-sm text-muted-foreground">Gerada ao atingir “Cadastro concluído” ({brl(BONUS_AMOUNT)}, uma única vez)</p>}
+      {isAdmin ? (
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-xl border bg-card p-4"><p className="text-xs text-muted-foreground">Valor médio da fatura</p><p className="text-xl font-bold">{brl(c.avg_bill)}</p></div>
+          <div className="rounded-xl border bg-card p-4"><p className="text-xs text-muted-foreground">Receita bruta mensal estimada (4%)</p><p className="text-xl font-bold text-success">{brl(calcRevenue(c.avg_bill))}</p>
+            <p className="text-xs text-muted-foreground">{c.avg_bill != null ? brl(c.avg_bill) + " × 0,04" : "Informe o valor da fatura"}</p></div>
+          <div className="rounded-xl border bg-card p-4"><p className="text-xs text-muted-foreground">Bonificação única</p>
+            {data.bonus ? (<><p className="text-xl font-bold">{brl(data.bonus.amount)}</p><p className="text-xs">{data.bonus.status === "confirmada" ? `Confirmada em ${fmtDate(data.bonus.confirmed_at)}` : "Pendente"} · gerada {fmtDate(data.bonus.created_at)}</p>
+              {data.bonus.status === "pendente" && <Button size="sm" className="mt-2" onClick={confirmBonus}>Confirmar bonificação</Button>}</>)
+              : <p className="text-sm text-muted-foreground">Gerada ao atingir “Cadastro concluído” ({brl(BONUS_AMOUNT)}, uma única vez)</p>}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl border bg-card p-4">
+            <p className="text-xs text-muted-foreground">Valor informado na fatura</p>
+            <p className="text-xl font-bold">{brl(c.avg_bill)}</p>
+          </div>
+          <div className="rounded-xl border bg-card p-4">
+            <p className="text-xs text-muted-foreground">Situação do cadastro</p>
+            <p className="mt-1 font-bold">{statusLabel(c.status)}</p>
+          </div>
+        </div>
+      )}
 
       {pend.length > 0 && <div className="rounded-xl border border-warning/40 bg-accent/10 p-4 text-sm"><span className="font-semibold">Pendências: </span>{pend.join(" · ")}</div>}
 
+      {canManage && (
       <div className="grid gap-5 lg:grid-cols-2">
         <section className="rounded-xl border bg-card p-5">
           <h2 className="mb-4 font-bold">Dados e edição</h2>
@@ -200,6 +254,45 @@ export default function ClientDetail() {
           <p className="mt-2 text-xs text-muted-foreground">{statusHist.length} mudança(s) de status</p>
         </section>
       </div>
+       <section className="rounded-xl border bg-card p-5">
+        <h2 className="mb-3 font-bold">Conversa do cadastro</h2>
+        <div className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
+          <MessageCircle className="h-4 w-4 text-primary" />
+          Use esta conversa para registrar o contato e solicitar as informações pendentes.
+        </div>
+        <div className="max-h-80 space-y-3 overflow-y-auto rounded-lg bg-muted/40 p-3">
+          {messagesLoading ? (
+            <p className="text-sm text-muted-foreground">Carregando conversa...</p>
+          ) : messages.length ? (
+            messages.map((item) => (
+              <div key={item.id} className="rounded-lg border bg-card p-3 text-sm">
+                <p className="whitespace-pre-wrap">{item.message}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {item.sender_id === user?.id ? (profile?.full_name || "Você") : (pname(item.sender_id) === "—" ? "Equipe interna" : pname(item.sender_id))}
+                  {" · "}{fmtDateTime(item.created_at)}
+                </p>
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-muted-foreground">Nenhuma mensagem ainda. Registre aqui o contato com o cliente.</p>
+          )}
+        </div>
+        <form onSubmit={sendMessage} className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <Textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            maxLength={2000}
+            rows={2}
+            placeholder={isInternal ? "Ex.: Solicitei CNH ou RG ao cliente." : "Avise a equipe interna sobre este cliente..."}
+          />
+          <Button type="submit" disabled={sendingMessage || !message.trim()} className="sm:self-end">
+            <Send className="h-4 w-4" />
+            Enviar
+          </Button>
+        </form>
+      </section>
+
+      {isAdmin && (     )}
 
       <section className="rounded-xl border bg-card p-5">
         <h2 className="mb-3 font-bold">Histórico mensal de receita</h2>
@@ -208,6 +301,7 @@ export default function ClientDetail() {
             <tbody>{data.revenues.map((r) => <tr key={r.id} className="border-t"><td className="py-2 capitalize">{fmtMonth(r.reference_month)}</td><td>{brl(r.bill_amount)}</td><td>{(Number(r.percent) * 100).toFixed(0)}%</td><td className="font-semibold text-success">{brl(r.revenue)}</td><td>{r.is_estimate ? "Estimativa" : "Real"}</td><td>{r.receipt_status === "recebido" ? "Recebido" : "Pendente"}</td><td>{r.notes ?? "—"}</td></tr>)}</tbody></table></div>
         ) : <p className="text-sm text-muted-foreground">Sem registros mensais. {isAdmin ? "Gere os registros do mês na área Financeiro." : ""}</p>}
       </section>
+      )}
     </div>
   );
 }
