@@ -1,12 +1,12 @@
 import { NavLink, Navigate, Outlet } from "react-router-dom";
-import { LayoutDashboard, Users, UserPlus, Megaphone, Wallet, ShieldCheck, LogOut, Zap } from "lucide-react";
+import { LayoutDashboard, Users, UserPlus, Megaphone, Wallet, ShieldCheck, Trash2, LogOut, Zap } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Loading } from "./States";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export function AppLayout() {
-  const { user, role, profile, loading, isAdmin, signOut } = useAuth();
+  const { user, role, profile, loading, isAdmin, isInternal, signOut } = useAuth();
   if (loading) return <Loading />;
   if (!user) return <Navigate to="/login" replace />;
   if (!role || !profile?.active)
@@ -25,9 +25,15 @@ export function AppLayout() {
         { to: "/novo", icon: UserPlus, label: "Cadastrar" },
         { to: "/remarketing", icon: Megaphone, label: "Remarketing" },
         { to: "/financeiro", icon: Wallet, label: "Financeiro" },
+        { to: "/lixeira", icon: Trash2, label: "Lixeira" },
         { to: "/usuarios", icon: ShieldCheck, label: "Usuários" },
       ]
-    : [{ to: "/novo", icon: UserPlus, label: "Cadastrar cliente" }];
+    : isInternal
+      ? [
+          { to: "/clientes", icon: Users, label: "Clientes" },
+          { to: "/novo", icon: UserPlus, label: "Cadastrar cliente" },
+        ]
+      : [{ to: "/novo", icon: UserPlus, label: "Cadastrar cliente" }];
 
   return (
     <div className="min-h-screen md:flex">
@@ -46,7 +52,7 @@ export function AppLayout() {
         </nav>
         <div className="border-t border-primary-foreground/20 pt-3 text-sm">
           <p className="truncate font-semibold">{profile.full_name || profile.email}</p>
-          <p className="text-xs opacity-80">{isAdmin ? "Administrador" : "Equipe"}</p>
+          <p className="text-xs opacity-80">{isAdmin ? "Administrador" : isInternal ? "Equipe interna" : "Equipe de rua"}</p>
           <button onClick={signOut} className="mt-2 flex items-center gap-2 text-xs opacity-90 hover:opacity-100"><LogOut className="h-3.5 w-3.5" />Sair</button>
         </div>
       </aside>
@@ -73,4 +79,14 @@ export function AppLayout() {
 export function AdminOnly({ children }: { children: JSX.Element }) {
   const { isAdmin } = useAuth();
   return isAdmin ? children : <Navigate to="/novo" replace />;
+}
+
+export function ClientsAccess({ children }: { children: JSX.Element }) {
+  const { isAdmin, isInternal } = useAuth();
+  return isAdmin || isInternal ? children : <Navigate to="/novo" replace />;
+}
+
+export function MemberAccess({ children }: { children: JSX.Element }) {
+  const { role } = useAuth();
+  return role ? children : <Navigate to="/login" replace />;
 }
