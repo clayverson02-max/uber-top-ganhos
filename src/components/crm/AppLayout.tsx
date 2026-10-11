@@ -18,13 +18,16 @@ export function AppLayout() {
       </div>
     );
 
-  const items = [
-    ...(isAdmin ? [{ to: "/", icon: LayoutDashboard, label: "Dashboard" }] : []),
-    { to: "/clientes", icon: Users, label: "Clientes" },
-    { to: "/novo", icon: UserPlus, label: "Novo" },
-    { to: "/remarketing", icon: Megaphone, label: "Remarketing" },
-    ...(isAdmin ? [{ to: "/financeiro", icon: Wallet, label: "Financeiro" }, { to: "/usuarios", icon: ShieldCheck, label: "Usuários" }] : []),
-  ];
+  const items = isAdmin
+    ? [
+        { to: "/", icon: LayoutDashboard, label: "Dashboard" },
+        { to: "/clientes", icon: Users, label: "Clientes" },
+        { to: "/novo", icon: UserPlus, label: "Cadastrar" },
+        { to: "/remarketing", icon: Megaphone, label: "Remarketing" },
+        { to: "/financeiro", icon: Wallet, label: "Financeiro" },
+        { to: "/usuarios", icon: ShieldCheck, label: "Usuários" },
+      ]
+    : [{ to: "/novo", icon: UserPlus, label: "Cadastrar cliente" }];
 
   return (
     <div className="min-h-screen md:flex">
