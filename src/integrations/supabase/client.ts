@@ -3,8 +3,10 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 import { brokeredPreviewStorage } from './previewAuthStorage';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+// This application is intentionally pinned to the dedicated Conta Amiga Supabase project.
+ // Keep only the publishable/anon key here. Never use a service_role or secret key in the browser.
+const SUPABASE_URL = "https://iyqyxqdzewgnoypcwtib.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml5cXl4cWR6ZXdnbm95cGN3dGliIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE2ODA3MTgsImV4cCI6MjEwNzI1NjcxOH0.QLwMV7hyqSlL-tsFepF6xHGxb3vJHq3aY-e_8Dlzf3o";
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
