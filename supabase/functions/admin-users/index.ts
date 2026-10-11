@@ -13,7 +13,7 @@ const json = (body: unknown, status = 200) =>
 
 const validRole = (value: unknown) => {
   const role = String(value ?? "");
-  return role === "admin" || role === "interno" || role === "equipe" ? role : null;
+  return role === "interno" || role === "equipe" ? role : null;
 };
 
 Deno.serve(async (req) => {
