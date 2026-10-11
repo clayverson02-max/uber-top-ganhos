@@ -35,7 +35,10 @@ export const DOC_STATUSES: { value: DocStatus; label: string }[] = [
   { value: "rejeitado", label: "Rejeitado" },
 ];
 export const docStatusLabel = (s: DocStatus) => DOC_STATUSES.find((x) => x.value === s)?.label ?? s;
-export const DOC_TYPES = {\n  fatura: "Fatura de energia",\n  documento_foto: "Documento de identidade (CNH/RG)",\n} as const;
+export const DOC_TYPES = {
+  fatura: "Fatura de energia",
+  documento_foto: "Documento de identidade (CNH/RG)",
+} as const;
 export type DocType = keyof typeof DOC_TYPES;
 
 export const ORIGINS = { anuncio: "Anúncio", whatsapp: "WhatsApp" } as const;
