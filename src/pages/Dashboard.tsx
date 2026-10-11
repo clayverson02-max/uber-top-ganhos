@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from "recharts";
 import { useBonuses, useClients, useDocs, useProfiles, useRevenues } from "@/hooks/useCrmData";
-import { BONUS_AMOUNT, STATUSES, brl, isPotential, statusColor, statusLabel } from "@/lib/crm";
+import { BONUS_AMOUNT, DOC_TYPES, STATUSES, brl, isPotential, statusColor, statusLabel } from "@/lib/crm";
 import { Loading, PageHeader } from "@/components/crm/States";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -45,7 +45,7 @@ export default function Dashboard() {
         ["Clientes cadastrados", clients.filter((c) => ["cadastro_concluido", "cliente_ativo", "cliente_inativo"].includes(c.status)).length],
         ["Clientes ativos", ativos.length],
         ["Clientes inativos", clients.filter((c) => c.status === "cliente_inativo").length],
-        ["Documentos pendentes", clients.length * 2 - curDocs.length + curDocs.filter((x) => x.status === "pendente").length],
+        ["Documentos pendentes", clients.length * Object.keys(DOC_TYPES).length - curDocs.length + curDocs.filter((x) => x.status === "pendente").length],
         ["Documentos em análise", curDocs.filter((x) => x.status === "em_analise").length],
         ["Não prosseguiram", clients.filter((c) => c.status === "nao_prosseguiu").length],
         ["Total de bonificações", brl(bonuses.length * BONUS_AMOUNT)],
