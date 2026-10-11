@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { LayoutGrid, List, Plus } from "lucide-react";
 import { useClients, useDocs, useProfiles } from "@/hooks/useCrmData";
-import { STATUSES, ORIGINS, brl, calcRevenue, fmtDate, fmtWhatsapp, statusColor, pendencies } from "@/lib/crm";
+import { DOC_TYPES, STATUSES, ORIGINS, brl, calcRevenue, fmtDate, fmtWhatsapp, statusColor, pendencies } from "@/lib/crm";
 import { StatusBadge } from "@/components/crm/StatusBadge";
 import { Empty, Loading, PageHeader } from "@/components/crm/States";
 import { WhatsappActions } from "@/components/crm/WhatsappActions";
@@ -48,12 +48,12 @@ export default function Clients() {
   const shown = list.slice((page - 1) * PER, page * PER);
   const docSummary = (id: string) => {
     const cur = docs.filter((d) => d.client_id === id && d.is_current);
-    return `${cur.length}/2`;
+    return `${cur.length}/${Object.keys(DOC_TYPES).length}`;
   };
 
   return (
     <div>
-      <PageHeader title="Clientes e potenciais clientes" subtitle={`${list.length} registro(s)`}
+      <PageHeader title="Clientes ativos" subtitle={`${list.length} registro(s)`}
         actions={<>
           <Button variant={view === "table" ? "default" : "outline"} size="sm" onClick={() => setView("table")}><List className="h-4 w-4" />Tabela</Button>
           <Button variant={view === "kanban" ? "default" : "outline"} size="sm" onClick={() => setView("kanban")}><LayoutGrid className="h-4 w-4" />Kanban</Button>
