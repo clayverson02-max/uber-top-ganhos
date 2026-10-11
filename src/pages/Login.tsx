@@ -11,7 +11,8 @@ import { toast } from "sonner";
 
 const ADMIN_EMAIL = (import.meta.env.VITE_COMPANY_LOGIN_EMAIL || "clayverson02@gmail.com").trim().toLowerCase();
 const STAFF_EMAIL = (import.meta.env.VITE_COMPANY_STAFF_EMAIL || "clayverson06@gmail.com").trim().toLowerCase();
-const ALLOWED_EMAILS = new Set([ADMIN_EMAIL, STAFF_EMAIL]);
+const INTERNAL_EMAIL = (import.meta.env.VITE_COMPANY_INTERNAL_EMAIL || "advanceofseals01@gmail.com").trim().toLowerCase();
+const ALLOWED_EMAILS = new Set([ADMIN_EMAIL, STAFF_EMAIL, INTERNAL_EMAIL]);
 const schema = z.object({
   email: z.string().trim().email("E-mail inválido").max(255),
   password: z.string().min(8, "Senha com no mínimo 8 caracteres").max(72),
