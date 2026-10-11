@@ -23,10 +23,28 @@ export default function UsersPage() {
   const [busy, setBusy] = useState(false);
   const call = async (body: Record<string, unknown>) => {
     setBusy(true);
-    const { data: res, error } = await supabase.functions.invoke("admin-users", { body });
+    let operationError: { message?: string } | null = null;
+    let responseError: string | null = null;
+
+    if (body.action === "set_role") {
+      const { error } = await supabase.rpc("set_staff_role", {
+        _user_id: String(body.user_id),
+        _role: String(body.role) as "equipe" | "interno",
+      });
+      operationError = error;
+    } else {
+      const { data: res, error } = await supabase.functions.invoke("admin-users", { body });
+      operationError = error;
+      responseError = res?.error ?? null;
+    }
+
     setBusy(false);
-    if (error || res?.error) { toast.error(res?.error ?? error?.message ?? "Erro na operação"); return false; }
-    qc.invalidateQueries({ queryKey: ["users-admin"] }); qc.invalidateQueries({ queryKey: ["profiles"] });
+    if (operationError || responseError) {
+      toast.error(responseError ?? operationError?.message ?? "Erro na operação");
+      return false;
+    }
+    qc.invalidateQueries({ queryKey: ["users-admin"] });
+    qc.invalidateQueries({ queryKey: ["profiles"] });
     return true;
   };
 
