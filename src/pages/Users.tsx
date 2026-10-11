@@ -42,7 +42,7 @@ export default function UsersPage() {
         <div className="space-y-1"><Label>Senha inicial</Label><Input type="password" minLength={8} value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} /></div>
         <div className="space-y-1"><Label>Perfil</Label>
           <Select value={f.role} onValueChange={(v) => setF({ ...f, role: v })}><SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value="equipe">Equipe</SelectItem><SelectItem value="admin">Administrador</SelectItem></SelectContent></Select></div>
+            <SelectContent><SelectItem value="equipe">Equipe de rua</SelectItem><SelectItem value="interno">Equipe interna</SelectItem><SelectItem value="admin">Administrador</SelectItem></SelectContent></Select></div>
         <Button type="submit" className="self-end" disabled={busy}>Criar usuário</Button>
       </form>
       {isLoading ? <Loading /> : (
@@ -54,7 +54,7 @@ export default function UsersPage() {
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" variant="outline" onClick={() => { const n = prompt("Novo nome", u.full_name); if (n) call({ action: "update", user_id: u.id, full_name: n }); }}>Editar nome</Button>
                   <Select value={u.role ?? ""} onValueChange={(v) => call({ action: "set_role", user_id: u.id, role: v })}><SelectTrigger className="h-9 w-40"><SelectValue placeholder="Sem perfil" /></SelectTrigger>
-                    <SelectContent><SelectItem value="equipe">Equipe</SelectItem><SelectItem value="admin">Administrador</SelectItem></SelectContent></Select>
+                    <SelectContent><SelectItem value="equipe">Equipe de rua</SelectItem><SelectItem value="interno">Equipe interna</SelectItem><SelectItem value="admin">Administrador</SelectItem></SelectContent></Select>
                   <Button size="sm" variant={u.active ? "destructive" : "secondary"} onClick={() => call({ action: "set_active", user_id: u.id, active: !u.active })}>{u.active ? "Desativar" : "Reativar"}</Button>
                 </div>
               )}
