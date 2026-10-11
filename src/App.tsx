@@ -3,7 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
-import { AppLayout, AdminOnly } from "@/components/crm/AppLayout";
+import { AppLayout, AdminOnly, ClientsAccess, MemberAccess } from "@/components/crm/AppLayout";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
@@ -13,13 +13,15 @@ import ClientDetail from "./pages/ClientDetail";
 import Remarketing from "./pages/Remarketing";
 import Finance from "./pages/Finance";
 import UsersPage from "./pages/Users";
+import Trash from "./pages/Trash";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: false } } });
 
 const Home = () => {
-  const { isAdmin } = useAuth();
-  return isAdmin ? <Dashboard /> : <Navigate to="/novo" replace />;
+  const { isAdmin, isInternal } = useAuth();
+  if (isAdmin) return <Dashboard />;
+  return <Navigate to={isInternal ? "/clientes" : "/novo"} replace />;
 };
 
 const App = () => (
@@ -39,11 +41,12 @@ const App = () => (
 
             <Route element={<AppLayout />}>
               <Route path="/" element={<Home />} />
-              <Route path="/clientes" element={<AdminOnly><Clients /></AdminOnly>} />
-              <Route path="/clientes/:id" element={<AdminOnly><ClientDetail /></AdminOnly>} />
+              <Route path="/clientes" element={<ClientsAccess><Clients /></ClientsAccess>} />
+              <Route path="/clientes/:id" element={<MemberAccess><ClientDetail /></MemberAccess>} />
               <Route path="/novo" element={<NewClient />} />
               <Route path="/remarketing" element={<AdminOnly><Remarketing /></AdminOnly>} />
               <Route path="/financeiro" element={<AdminOnly><Finance /></AdminOnly>} />
+              <Route path="/lixeira" element={<AdminOnly><Trash /></AdminOnly>} />
               <Route path="/usuarios" element={<AdminOnly><UsersPage /></AdminOnly>} />
             </Route>
             <Route path="*" element={<NotFound />} />
