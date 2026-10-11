@@ -42,7 +42,7 @@ export default function UsersPage() {
         <div className="space-y-1"><Label>Senha inicial</Label><Input type="password" minLength={8} value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} /></div>
         <div className="space-y-1"><Label>Perfil</Label>
           <Select value={f.role} onValueChange={(v) => setF({ ...f, role: v })}><SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value="equipe">Equipe de rua</SelectItem><SelectItem value="interno">Equipe interna</SelectItem><SelectItem value="admin">Administrador</SelectItem></SelectContent></Select></div>
+            <SelectContent><SelectItem value="equipe">Equipe de rua</SelectItem><SelectItem value="interno">Equipe interna</SelectItem></SelectContent></Select></div>
         <Button type="submit" className="self-end" disabled={busy}>Criar usuário</Button>
       </form>
       {isLoading ? <Loading /> : (
