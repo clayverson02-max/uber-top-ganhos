@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { UserPlus, ChevronDown, ChevronUp } from "lucide-react";
 
 export default function UsersPage() {
   const { user } = useAuth();
@@ -22,7 +21,6 @@ export default function UsersPage() {
   });
   const [f, setF] = useState({ full_name: "", email: "", password: "", role: "equipe" });
   const [busy, setBusy] = useState(false);
-  const [showCreate, setShowCreate] = useState(true);
   const call = async (body: Record<string, unknown>) => {
     setBusy(true);
     const { data: res, error } = await supabase.functions.invoke("admin-users", { body });
@@ -34,9 +32,8 @@ export default function UsersPage() {
 
   return (
     <div>
-      <PageHeader title="Usuários" subtitle="Crie, edite e desative acessos da equipe"
-        actions={<Button variant="outline" onClick={() => setShowCreate((value) => !value)}><UserPlus className="h-4 w-4" />Adicionar funcionário {showCreate ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}</Button>} />
-      {showCreate && <form className="mb-6 grid gap-3 rounded-xl border bg-card p-5 sm:grid-cols-5" onSubmit={async (e) => {
+      <PageHeader title="Usuários" subtitle="Crie, edite e desative acessos da equipe" />
+      <form className="mb-6 grid gap-3 rounded-xl border bg-card p-5 sm:grid-cols-5" onSubmit={async (e) => {
         e.preventDefault();
         if (await call({ action: "create", ...f })) { toast.success("Usuário criado"); setF({ full_name: "", email: "", password: "", role: "equipe" }); }
       }}>
@@ -46,8 +43,8 @@ export default function UsersPage() {
         <div className="space-y-1"><Label>Perfil</Label>
           <Select value={f.role} onValueChange={(v) => setF({ ...f, role: v })}><SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent><SelectItem value="equipe">Equipe de rua</SelectItem><SelectItem value="interno">Equipe interna</SelectItem></SelectContent></Select></div>
-        <Button type="submit" className="self-end" disabled={busy}><UserPlus className="h-4 w-4" />Criar usuário</Button>
-      </form>}
+        <Button type="submit" className="self-end" disabled={busy}>Criar usuário</Button>
+      </form>
       {isLoading ? <Loading /> : (
         <div className="space-y-2">
           {data!.map((u) => (
