@@ -72,5 +72,5 @@ export function AppLayout() {
 
 export function AdminOnly({ children }: { children: JSX.Element }) {
   const { isAdmin } = useAuth();
-  return isAdmin ? children : <Navigate to="/clientes" replace />;
+  return isAdmin ? children : <Navigate to="/novo" replace />;
 }
