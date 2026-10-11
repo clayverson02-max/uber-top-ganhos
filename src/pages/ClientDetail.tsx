@@ -1,11 +1,11 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, FileText, Upload, Eye, MessageCircle, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfiles } from "@/hooks/useCrmData";
-import { BONUS_AMOUNT, DOC_STATUSES, DOC_TYPES, ORIGINS, STATUSES, brl, calcRevenue, fmtDate, fmtDateTime, fmtMonth, fmtWhatsapp, normalizeWhatsapp, pendencies, type ClientStatus, type DocStatus, type DocType } from "@/lib/crm";
+import { BONUS_AMOUNT, DOC_STATUSES, DOC_TYPES, ORIGINS, STATUSES, brl, calcRevenue, fmtDate, fmtDateTime, fmtMonth, fmtWhatsapp, normalizeWhatsapp, statusLabel, pendencies, type ClientStatus, type DocStatus, type DocType } from "@/lib/crm";
 import { openDoc, uploadDoc, validatePdf } from "@/lib/docs";
 import { StatusBadge, DocBadge } from "@/components/crm/StatusBadge";
 import { Loading, Empty } from "@/components/crm/States";
@@ -20,6 +20,7 @@ import { toast } from "sonner";
 
 export default function ClientDetail() {
   const { id } = useParams();
+  const nav = useNavigate();
   const { user, profile, isAdmin, isInternal } = useAuth();
   const qc = useQueryClient();
   const { data: profiles = [] } = useProfiles();
@@ -142,8 +143,11 @@ export default function ClientDetail() {
   };
   const softDelete = async () => {
     if (!confirm("Arquivar este registro? Ele deixa de aparecer nas listas, mas o histórico é mantido.")) return;
-    await supabase.from("clients").update({ deleted_at: new Date().toISOString() }).eq("id", c.id);
-    await log("edicao", "Registro arquivado (exclusão lógica)"); toast.success("Registro arquivado"); reload();
+    const { error } = await supabase.from("clients").update({ deleted_at: new Date().toISOString() }).eq("id", c.id);
+    if (error) return toast.error(error.message);
+    await log("edicao", "Registro arquivado (exclusão lógica)");
+    toast.success("Registro arquivado");
+    nav("/lixeira");
   };
 
   const pend = pendencies(c, data.docs);
@@ -161,10 +165,12 @@ export default function ClientDetail() {
         </div>
         <div className="flex flex-col gap-2 sm:items-end">
           <WhatsappActions whatsapp={c.whatsapp} />
+          {canManage && (
           <Select value={c.status} onValueChange={(v) => setStatus(v as ClientStatus)}>
             <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
             <SelectContent>{STATUSES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
           </Select>
+          )}
         </div>
       </div>
 
@@ -195,6 +201,7 @@ export default function ClientDetail() {
       {pend.length > 0 && <div className="rounded-xl border border-warning/40 bg-accent/10 p-4 text-sm"><span className="font-semibold">Pendências: </span>{pend.join(" · ")}</div>}
 
       {canManage && (
+      <>
       <div className="grid gap-5 lg:grid-cols-2">
         <section className="rounded-xl border bg-card p-5">
           <h2 className="mb-4 font-bold">Dados e edição</h2>
@@ -292,8 +299,7 @@ export default function ClientDetail() {
         </form>
       </section>
 
-      {isAdmin && (     )}
-
+      {isAdmin && (
       <section className="rounded-xl border bg-card p-5">
         <h2 className="mb-3 font-bold">Histórico mensal de receita</h2>
         {data.revenues.length ? (
@@ -302,6 +308,7 @@ export default function ClientDetail() {
         ) : <p className="text-sm text-muted-foreground">Sem registros mensais. {isAdmin ? "Gere os registros do mês na área Financeiro." : ""}</p>}
       </section>
       )}
+      </>)}
     </div>
   );
 }
