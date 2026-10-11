@@ -1,13 +1,16 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { LayoutGrid, List, Plus } from "lucide-react";
+import { LayoutGrid, List, Plus, Trash2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useClients, useDocs, useProfiles } from "@/hooks/useCrmData";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { DOC_TYPES, STATUSES, ORIGINS, brl, calcRevenue, fmtDate, fmtWhatsapp, statusColor, pendencies } from "@/lib/crm";
 import { StatusBadge } from "@/components/crm/StatusBadge";
 import { Empty, Loading, PageHeader } from "@/components/crm/States";
 import { WhatsappActions } from "@/components/crm/WhatsappActions";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -15,6 +18,7 @@ const PER = 20;
 
 export default function Clients() {
   const { isAdmin } = useAuth();
+  const qc = useQueryClient();
   const { data: clients, isLoading } = useClients();
   const { data: docs = [] } = useDocs();
   const { data: profiles = [] } = useProfiles();
@@ -48,6 +52,16 @@ export default function Clients() {
 
   const pages = Math.max(1, Math.ceil(list.length / PER));
   const shown = list.slice((page - 1) * PER, page * PER);
+  const archiveClient = async (id: string, name: string) => {
+    if (!isAdmin) return;
+    if (!confirm(`Mover ${name} para a lixeira? O cadastro poderá ser restaurado pelo administrador.`)) return;
+    const { error } = await supabase.from("clients").update({ deleted_at: new Date().toISOString() }).eq("id", id);
+    if (error) return toast.error("Não foi possível mover para a lixeira: " + error.message);
+    toast.success("Cliente movido para a lixeira");
+    qc.invalidateQueries({ queryKey: ["clients"] });
+    qc.invalidateQueries({ queryKey: ["deleted-clients"] });
+  };
+
   const docSummary = (id: string) => {
     const cur = docs.filter((d) => d.client_id === id && d.is_current);
     return `${cur.length}/${Object.keys(DOC_TYPES).length}`;
@@ -108,14 +122,14 @@ export default function Clients() {
                   <div className="mb-1 flex items-start justify-between gap-2"><p className="font-semibold">{c.full_name}</p><StatusBadge status={c.status} /></div>
                   <p className="text-sm text-muted-foreground">{fmtWhatsapp(c.whatsapp)} · {c.email}</p>
                   <p className="mt-1 text-xs">{ORIGINS[c.origin as keyof typeof ORIGINS]} · {pname(c.responsible_id)} · Fatura {brl(c.avg_bill)}{isAdmin && <> · 4% {brl(calcRevenue(c.avg_bill))}</>}</p>
-                  <div className="mt-3"><WhatsappActions whatsapp={c.whatsapp} /></div>
+                  <div className="mt-3 flex items-center justify-between gap-2"><WhatsappActions whatsapp={c.whatsapp} />{isAdmin && <Button size="icon" variant="ghost" className="text-destructive hover:text-destructive" aria-label={`Mover ${c.full_name} para a lixeira`} onClick={(event) => { event.stopPropagation(); archiveClient(c.id, c.full_name); }}><Trash2 className="h-4 w-4" /></Button>}</div>
                 </div>
               ))}
             </div>
             <div className="hidden overflow-x-auto rounded-xl border bg-card md:block">
               <table className="w-full text-sm">
                 <thead className="bg-muted/60 text-left text-xs uppercase text-muted-foreground">
-                  <tr>{["Nome", "WhatsApp", "E-mail", "Origem", "Status", "Responsável", "Fatura média", ...(isAdmin ? ["Receita 4%"] : []), "Docs", "Cadastro", "Atualização"].map((h) => <th key={h} className="px-3 py-2.5 font-semibold">{h}</th>)}</tr>
+                  <tr>{["Nome", "WhatsApp", "E-mail", "Origem", "Status", "Responsável", "Fatura média", ...(isAdmin ? ["Receita 4%"] : []), "Docs", "Cadastro", "Atualização", ...(isAdmin ? ["Lixeira"] : [])].map((h) => <th key={h} className="px-3 py-2.5 font-semibold">{h}</th>)}</tr>
                 </thead>
                 <tbody>
                   {shown.map((c) => (
@@ -131,6 +145,7 @@ export default function Clients() {
                       <td className="px-3 py-2.5">{docSummary(c.id)}</td>
                       <td className="px-3 py-2.5">{fmtDate(c.created_at)}</td>
                       <td className="px-3 py-2.5">{fmtDate(c.updated_at)}</td>
+                      {isAdmin && <td className="px-3 py-2.5" onClick={(event) => event.stopPropagation()}><Button size="icon" variant="ghost" className="text-destructive hover:text-destructive" aria-label={`Mover ${c.full_name} para a lixeira`} onClick={() => archiveClient(c.id, c.full_name)}><Trash2 className="h-4 w-4" /></Button></td>}
                     </tr>
                   ))}
                 </tbody>
