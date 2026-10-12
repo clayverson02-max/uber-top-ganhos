@@ -98,7 +98,7 @@ export default function NewClient() {
     setFormKey((value) => value + 1);
 
     if (isAdmin) {
-      toast.success("Cliente ativo cadastrado com bonificação de R$ 25,00.");
+      toast.success("Cliente ativo cadastrado com sucesso.");
       nav(`/clientes/${client.id}`);
     } else {
       setCreatedClientId(client.id);
@@ -123,7 +123,7 @@ export default function NewClient() {
           <div>
             <p className="font-bold">Cadastro concluído</p>
             {isAdmin ? (
-              <p>Cliente ativo, bonificação de R$ 25,00 registrada e fatura enviada.</p>
+              <p>Cliente ativo e fatura enviada com sucesso.</p>
             ) : (
               <>
                 <p>Cliente ativo e fatura enviada com sucesso.</p>
@@ -144,11 +144,6 @@ export default function NewClient() {
           <p className="mt-1 text-muted-foreground">
             O cliente entra como <strong className="text-foreground">ativo</strong> automaticamente.
           </p>
-          {isAdmin && (
-            <p className="mt-1 text-muted-foreground">
-              A bonificação de <strong className="text-foreground">R$ 25,00</strong> é registrada no cadastro.
-            </p>
-          )}
         </div>
 
         <div className="space-y-1.5">
@@ -190,7 +185,7 @@ export default function NewClient() {
           {errors.avg_bill && <p className="text-xs text-destructive">{errors.avg_bill}</p>}
           {isAdmin && (
             <div className="rounded-lg bg-muted/60 p-3 text-sm">
-              <p>Recorrência estimada: <strong>{brl(recurrence)}</strong> (4% da fatura)</p>
+              <p>Comissão recorrente estimada: <strong>{brl(recurrence)}</strong> (4% mensal da fatura)</p>
               <p className="mt-1 text-xs text-muted-foreground">O cálculo considera o valor informado acima.</p>
             </div>
           )}
