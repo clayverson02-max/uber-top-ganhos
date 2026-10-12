@@ -204,16 +204,25 @@ export type Database = {
       clients: {
         Row: {
           avg_bill: number | null
+          bairro: string | null
+          cep: string | null
+          cidade: string | null
           code: number
+          complemento: string | null
+          consumo_medio_kwh: number | null
           created_at: string
           created_by: string
           deleted_at: string | null
           email: string
+          estado: string | null
           full_name: string
           id: string
           last_contact_at: string | null
+          logradouro: string | null
           next_contact_at: string | null
           notes: string | null
+          numero: string | null
+          numero_instalacao: string | null
           origin: string
           responsible_id: string | null
           status: Database["public"]["Enums"]["client_status"]
@@ -223,16 +232,25 @@ export type Database = {
         }
         Insert: {
           avg_bill?: number | null
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
           code?: never
+          complemento?: string | null
+          consumo_medio_kwh?: number | null
           created_at?: string
           created_by: string
           deleted_at?: string | null
           email: string
+          estado?: string | null
           full_name: string
           id?: string
           last_contact_at?: string | null
+          logradouro?: string | null
           next_contact_at?: string | null
           notes?: string | null
+          numero?: string | null
+          numero_instalacao?: string | null
           origin: string
           responsible_id?: string | null
           status?: Database["public"]["Enums"]["client_status"]
@@ -242,16 +260,25 @@ export type Database = {
         }
         Update: {
           avg_bill?: number | null
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
           code?: never
+          complemento?: string | null
+          consumo_medio_kwh?: number | null
           created_at?: string
           created_by?: string
           deleted_at?: string | null
           email?: string
+          estado?: string | null
           full_name?: string
           id?: string
           last_contact_at?: string | null
+          logradouro?: string | null
           next_contact_at?: string | null
           notes?: string | null
+          numero?: string | null
+          numero_instalacao?: string | null
           origin?: string
           responsible_id?: string | null
           status?: Database["public"]["Enums"]["client_status"]
