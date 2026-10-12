@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from "recharts";
-import { useBonuses, useClients, useDocs, useProfiles, useRevenues } from "@/hooks/useCrmData";
-import { BONUS_AMOUNT, DOC_TYPES, STATUSES, brl, isPotential, statusColor, statusLabel } from "@/lib/crm";
+import { useClients, useDocs, useProfiles, useRevenues } from "@/hooks/useCrmData";
+import { DOC_TYPES, REVENUE_PERCENT, STATUSES, brl, getCommissionGoal, getNextCommissionGoal, isPotential, statusColor, statusLabel } from "@/lib/crm";
 import { Loading, PageHeader } from "@/components/crm/States";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,7 +12,6 @@ const mLabel = (k: string) => { const [y, m] = k.split("-"); return `${m}/${y.sl
 export default function Dashboard() {
   const { data: clientsAll, isLoading } = useClients();
   const { data: docs = [] } = useDocs();
-  const { data: bonusesAll = [] } = useBonuses();
   const { data: revenues = [] } = useRevenues();
   const { data: profiles = [] } = useProfiles();
   const [from, setFrom] = useState("");
@@ -26,17 +25,15 @@ export default function Dashboard() {
     const clients = (clientsAll ?? []).filter((c) => inP(c.created_at) && (st === "all" || c.status === st) && (or === "all" || c.origin === or) && (emp === "all" || c.responsible_id === emp || c.created_by === emp));
     const ids = new Set(clients.map((c) => c.id));
     const curDocs = docs.filter((x) => x.is_current && ids.has(x.client_id));
-    const bonuses = bonusesAll.filter((b) => ids.has(b.client_id) && inP(b.created_at));
     const revs = revenues.filter((r) => ids.has(r.client_id));
     const ativos = clients.filter((c) => c.status === "cliente_ativo");
     const thisMonth = new Date().toISOString().slice(0, 7);
     const withBill = ativos.filter((c) => c.avg_bill != null);
+    const nextGoal = getNextCommissionGoal(ativos.length);
     const byMonth: Record<string, number> = {};
     clients.forEach((c) => (byMonth[mk(c.created_at)] = (byMonth[mk(c.created_at)] ?? 0) + 1));
     const revMonth: Record<string, { estimada: number; realizada: number }> = {};
     revs.forEach((r) => { const k = mk(r.reference_month); revMonth[k] ??= { estimada: 0, realizada: 0 }; revMonth[k].estimada += Number(r.revenue); if (r.receipt_status === "recebido") revMonth[k].realizada += Number(r.revenue); });
-    const bonMonth: Record<string, number> = {};
-    bonuses.forEach((b) => (bonMonth[mk(b.created_at)] = (bonMonth[mk(b.created_at)] ?? 0) + Number(b.amount)));
     const byEmp: Record<string, number> = {};
     clients.forEach((c) => { const n = profiles.find((p) => p.id === c.created_by)?.full_name || "—"; byEmp[n] = (byEmp[n] ?? 0) + 1; });
     return {
@@ -48,21 +45,21 @@ export default function Dashboard() {
         ["Documentos pendentes", clients.length * Object.keys(DOC_TYPES).length - curDocs.length + curDocs.filter((x) => x.status === "pendente").length],
         ["Documentos em análise", curDocs.filter((x) => x.status === "em_analise").length],
         ["Não prosseguiram", clients.filter((c) => c.status === "nao_prosseguiu").length],
-        ["Total de bonificações", brl(bonuses.length * BONUS_AMOUNT)],
-        ["Receita estimada do mês", brl(revs.filter((r) => mk(r.reference_month) === thisMonth).reduce((s, r) => s + Number(r.revenue), 0) || withBill.reduce((s, c) => s + Number(c.avg_bill) * 0.04, 0))],
+        ["Comissão por meta", brl(getCommissionGoal(ativos.length))],
+        ["Próxima meta", nextGoal ? `${nextGoal.people} pessoas · ${brl(nextGoal.amount)}` : "Todas atingidas"],
+        ["Receita estimada do mês", brl(revs.filter((r) => mk(r.reference_month) === thisMonth).reduce((s, r) => s + Number(r.revenue), 0) || withBill.reduce((s, c) => s + Number(c.avg_bill) * REVENUE_PERCENT, 0))],
         ["Receita realizada", brl(revs.filter((r) => r.receipt_status === "recebido").reduce((s, r) => s + Number(r.revenue), 0))],
-        ["Receita bruta acumulada", brl(revs.filter((r) => r.receipt_status === "recebido").reduce((s, r) => s + Number(r.revenue), 0) + bonuses.filter((b) => b.status === "confirmada").length * BONUS_AMOUNT)],
+        ["Receita recorrente acumulada", brl(revs.filter((r) => r.receipt_status === "recebido").reduce((s, r) => s + Number(r.revenue), 0))],
         ["Média das faturas (ativos)", brl(withBill.length ? withBill.reduce((s, c) => s + Number(c.avg_bill), 0) / withBill.length : null)],
       ] as [string, string | number][],
       byMonth: Object.keys(byMonth).sort().map((k) => ({ mes: mLabel(k), cadastros: byMonth[k] })),
       byStatus: STATUSES.map((s) => ({ key: s.value, name: s.label, value: clients.filter((c) => c.status === s.value).length })).filter((x) => x.value),
       byOrigin: [{ name: "Anúncio", value: clients.filter((c) => c.origin === "anuncio").length }, { name: "WhatsApp", value: clients.filter((c) => c.origin === "whatsapp").length }],
       revMonth: Object.keys(revMonth).sort().map((k) => ({ mes: mLabel(k), ...revMonth[k] })),
-      bonMonth: Object.keys(bonMonth).sort().map((k) => ({ mes: mLabel(k), valor: bonMonth[k] })),
       byEmp: Object.entries(byEmp).map(([name, v]) => ({ name, cadastros: v })),
       ativosInativos: [{ name: "Ativos", value: ativos.length }, { name: "Inativos", value: clients.filter((c) => c.status === "cliente_inativo").length }],
     };
-  }, [clientsAll, docs, bonusesAll, revenues, profiles, from, to, st, or, emp]);
+  }, [clientsAll, docs, revenues, profiles, from, to, st, or, emp]);
 
   if (isLoading) return <Loading />;
   const Box = ({ title, children }: { title: string; children: React.ReactElement }) => (
@@ -92,7 +89,6 @@ export default function Dashboard() {
         <Box title="Clientes por status"><PieChart><Pie data={d.byStatus} dataKey="value" nameKey="name" outerRadius={85}>{d.byStatus.map((s) => <Cell key={s.key} fill={statusColor(s.key)} />)}</Pie><Tooltip formatter={(v, n) => [v, statusLabel(String(n) as never) ?? n]} /></PieChart></Box>
         <Box title="Clientes por origem"><PieChart><Pie data={d.byOrigin} dataKey="value" nameKey="name" innerRadius={45} outerRadius={85}><Cell fill={P} /><Cell fill={G} /></Pie><Legend /><Tooltip /></PieChart></Box>
         <Box title="Receita mensal (bruta)"><LineChart data={d.revMonth}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="mes" fontSize={11} /><YAxis fontSize={11} /><Tooltip formatter={(v) => brl(Number(v))} /><Legend /><Line dataKey="estimada" stroke={P} strokeWidth={2} /><Line dataKey="realizada" stroke={G} strokeWidth={2} /></LineChart></Box>
-        <Box title="Bonificações por período"><BarChart data={d.bonMonth}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="mes" fontSize={11} /><YAxis fontSize={11} /><Tooltip formatter={(v) => brl(Number(v))} /><Bar dataKey="valor" fill={Y} radius={4} /></BarChart></Box>
         <Box title="Cadastros por funcionário"><BarChart data={d.byEmp} layout="vertical"><CartesianGrid strokeDasharray="3 3" /><XAxis type="number" allowDecimals={false} fontSize={11} /><YAxis type="category" dataKey="name" width={90} fontSize={11} /><Tooltip /><Bar dataKey="cadastros" fill={P} radius={4} /></BarChart></Box>
         <Box title="Ativos e inativos"><PieChart><Pie data={d.ativosInativos} dataKey="value" nameKey="name" innerRadius={45} outerRadius={85}><Cell fill={G} /><Cell fill={M} /></Pie><Legend /><Tooltip /></PieChart></Box>
       </div>
