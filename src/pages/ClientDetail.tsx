@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfiles } from "@/hooks/useCrmData";
 import { DOC_STATUSES, DOC_TYPES, ORIGINS, STATUSES, brl, calcRevenue, fmtDate, fmtDateTime, fmtMonth, fmtWhatsapp, normalizeWhatsapp, statusLabel, pendencies, type ClientStatus, type DocStatus, type DocType } from "@/lib/crm";
-import { downloadDoc, openDoc, uploadDoc, validatePdf } from "@/lib/docs";
+import { downloadDoc, openDoc, uploadDoc, validateDocument, validatePdf } from "@/lib/docs";
 import { StatusBadge, DocBadge } from "@/components/crm/StatusBadge";
 import { Loading, Empty } from "@/components/crm/States";
 import { WhatsappActions } from "@/components/crm/WhatsappActions";
@@ -61,8 +61,26 @@ export default function ClientDetail() {
   useEffect(() => {
     if (data?.client) {
       const c = data.client;
-      setF({ full_name: c.full_name, email: c.email, whatsapp: c.whatsapp, origin: c.origin, avg_bill: c.avg_bill?.toString() ?? "", notes: c.notes ?? "",
-        last_contact_at: c.last_contact_at ?? "", next_contact_at: c.next_contact_at ?? "", responsible_id: c.responsible_id ?? "" });
+      setF({
+        full_name: c.full_name,
+        email: c.email,
+        whatsapp: c.whatsapp,
+        origin: c.origin,
+        avg_bill: c.avg_bill?.toString() ?? "",
+        cep: c.cep ?? "",
+        logradouro: c.logradouro ?? "",
+        numero: c.numero ?? "",
+        complemento: c.complemento ?? "",
+        bairro: c.bairro ?? "",
+        cidade: c.cidade ?? "",
+        estado: c.estado ?? "",
+        consumo_medio_kwh: c.consumo_medio_kwh?.toString() ?? "",
+        numero_instalacao: c.numero_instalacao ?? "",
+        notes: c.notes ?? "",
+        last_contact_at: c.last_contact_at ?? "",
+        next_contact_at: c.next_contact_at ?? "",
+        responsible_id: c.responsible_id ?? "",
+      });
     }
   }, [data?.client]);
 
@@ -105,11 +123,31 @@ export default function ClientDetail() {
     if (!/^55\d{10,11}$/.test(wa)) return toast.error("WhatsApp inválido");
     const bill = f.avg_bill ? Number(f.avg_bill.replace(",", ".")) : null;
     if (bill != null && (isNaN(bill) || bill < 0)) return toast.error("Valor da fatura inválido");
+    const consumption = f.consumo_medio_kwh?.trim()
+      ? Number(f.consumo_medio_kwh.replace(",", "."))
+      : null;
+    if (consumption != null && (isNaN(consumption) || consumption < 0)) return toast.error("Consumo médio inválido");
     const { data: dups } = await supabase.rpc("find_duplicates", { _whatsapp: wa, _email: f.email.trim(), _exclude: c.id });
     if (dups?.length) toast.warning(`Atenção: existe registro semelhante (#${dups[0].code} ${dups[0].full_name})`);
     const { error } = await supabase.from("clients").update({
-      full_name: f.full_name.trim(), email, whatsapp: wa, origin: f.origin, avg_bill: bill,
-      notes: f.notes.trim() || null, last_contact_at: f.last_contact_at || null, next_contact_at: f.next_contact_at || null, responsible_id: f.responsible_id || null,
+      full_name: f.full_name.trim(),
+      email,
+      whatsapp: wa,
+      origin: f.origin,
+      avg_bill: bill,
+      cep: f.cep?.trim() || null,
+      logradouro: f.logradouro?.trim() || null,
+      numero: f.numero?.trim() || null,
+      complemento: f.complemento?.trim() || null,
+      bairro: f.bairro?.trim() || null,
+      cidade: f.cidade?.trim() || null,
+      estado: f.estado?.trim().toUpperCase() || null,
+      consumo_medio_kwh: consumption,
+      numero_instalacao: f.numero_instalacao?.trim() || null,
+      notes: f.notes.trim() || null,
+      last_contact_at: f.last_contact_at || null,
+      next_contact_at: f.next_contact_at || null,
+      responsible_id: f.responsible_id || null,
     }).eq("id", c.id);
     if (error) return toast.error(error.message);
     await log("edicao", "Dados do cadastro editados");
@@ -131,8 +169,15 @@ export default function ClientDetail() {
     await log("documento", `Status de documento alterado para ${s}`); reload();
   };
   const replace = async (t: DocType, file?: File) => {
-    const err = validatePdf(file); if (err) return toast.error(err);
-    try { await uploadDoc(c.id, t, file!, user!.id); toast.success("Documento enviado"); reload(); } catch (e) { toast.error("Falha no envio do documento"); }
+    const err = t === "fatura" ? validatePdf(file) : validateDocument(file);
+    if (err) return toast.error(err);
+    try {
+      await uploadDoc(c.id, t, file!, user!.id);
+      toast.success("Documento enviado");
+      reload();
+    } catch {
+      toast.error("Falha no envio do documento");
+    }
   };
   const softDelete = async () => {
     if (!confirm("Arquivar este registro? Ele deixa de aparecer nas listas, mas o histórico é mantido.")) return;
@@ -213,6 +258,21 @@ export default function ClientDetail() {
             <div className="space-y-1"><Label>Último contato</Label><Input type="date" value={f.last_contact_at ?? ""} onChange={(e) => setF({ ...f, last_contact_at: e.target.value })} /></div>
             <div className="space-y-1"><Label>Próximo contato</Label><Input type="date" value={f.next_contact_at ?? ""} onChange={(e) => setF({ ...f, next_contact_at: e.target.value })} /></div>
           </div>
+          <div className="mt-5 border-t pt-4">
+            <h3 className="font-semibold">Dados da instalação</h3>
+            <p className="mt-1 text-xs text-muted-foreground">Podem completar o cadastro quando a fatura em PDF ainda não foi enviada.</p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1"><Label>CEP</Label><Input value={f.cep ?? ""} onChange={(e) => setF({ ...f, cep: e.target.value })} placeholder="00000-000" /></div>
+              <div className="space-y-1"><Label>Logradouro</Label><Input value={f.logradouro ?? ""} onChange={(e) => setF({ ...f, logradouro: e.target.value })} /></div>
+              <div className="space-y-1"><Label>Número</Label><Input value={f.numero ?? ""} onChange={(e) => setF({ ...f, numero: e.target.value })} /></div>
+              <div className="space-y-1"><Label>Complemento</Label><Input value={f.complemento ?? ""} onChange={(e) => setF({ ...f, complemento: e.target.value })} placeholder="Opcional" /></div>
+              <div className="space-y-1"><Label>Bairro</Label><Input value={f.bairro ?? ""} onChange={(e) => setF({ ...f, bairro: e.target.value })} /></div>
+              <div className="space-y-1"><Label>Cidade</Label><Input value={f.cidade ?? ""} onChange={(e) => setF({ ...f, cidade: e.target.value })} /></div>
+              <div className="space-y-1"><Label>Estado (UF)</Label><Input maxLength={2} value={f.estado ?? ""} onChange={(e) => setF({ ...f, estado: e.target.value.toUpperCase() })} placeholder="CE" /></div>
+              <div className="space-y-1"><Label>Consumo médio mensal (kWh)</Label><Input inputMode="decimal" value={f.consumo_medio_kwh ?? ""} onChange={(e) => setF({ ...f, consumo_medio_kwh: e.target.value })} /></div>
+              <div className="space-y-1 sm:col-span-2"><Label>Número de instalação</Label><Input value={f.numero_instalacao ?? ""} onChange={(e) => setF({ ...f, numero_instalacao: e.target.value })} placeholder="Número que aparece no papel de energia" /></div>
+            </div>
+          </div>
           <div className="mt-3 space-y-1"><Label>Observações</Label><Textarea maxLength={2000} value={f.notes ?? ""} onChange={(e) => setF({ ...f, notes: e.target.value })} /></div>
           <div className="mt-4 flex flex-wrap gap-2"><Button onClick={save}>Salvar alterações</Button>{isAdmin && <Button variant="outline" onClick={softDelete}>Arquivar registro</Button>}</div>
         </section>
@@ -238,27 +298,27 @@ export default function ClientDetail() {
                               await openDoc(d.file_path, popup);
                             } catch {
                               popup?.close();
-                              toast.error("Não foi possível abrir o PDF. Verifique seu acesso.");
+                              toast.error("Não foi possível abrir o arquivo. Verifique seu acesso.");
                             }
                           }}
                         >
-                          <Eye className="h-4 w-4" />Ver PDF
+                          <Eye className="h-4 w-4" />Ver arquivo
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() =>
                             downloadDoc(d.file_path, d.file_name).catch(() =>
-                              toast.error("Não foi possível baixar o PDF. Verifique seu acesso.")
+                              toast.error("Não foi possível baixar o arquivo. Verifique seu acesso.")
                             )
                           }
                         >
-                          <Download className="h-4 w-4" />Baixar PDF
+                          <Download className="h-4 w-4" />Baixar arquivo
                         </Button>
                       </>
                     )}
                     <Button size="sm" variant="outline" asChild><label className="cursor-pointer"><Upload className="h-4 w-4" />{d ? "Substituir" : "Enviar"}
-                      <input type="file" accept="application/pdf" className="hidden" onChange={(e) => { replace(t, e.target.files?.[0]); e.target.value = ""; }} /></label></Button>
+                      <input type="file" accept={t === "fatura" ? "application/pdf,.pdf" : "application/pdf,image/*"} className="hidden" onChange={(e) => { replace(t, e.target.files?.[0]); e.target.value = ""; }} /></label></Button>
                     {d && <Select value={d.status} onValueChange={(v) => setDocStatus(d.id, v as DocStatus)}><SelectTrigger className="h-9 w-36"><SelectValue /></SelectTrigger>
                       <SelectContent>{DOC_STATUSES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent></Select>}
                   </div>
