@@ -6,7 +6,6 @@ import { useClients, useProfiles, useRevenues } from "@/hooks/useCrmData";
 import {
   COMMISSION_GOALS,
   brl,
-  fmtDate,
   fmtMonth,
   getCommissionGoal,
   getNextCommissionGoal,
