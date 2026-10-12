@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { RotateCcw, Trash2 } from "lucide-react";
+import { Loader2, RotateCcw, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Empty, Loading, PageHeader } from "@/components/crm/States";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { toast } from "sonner";
 
 export default function Trash() {
   const qc = useQueryClient();
+  const [busyId, setBusyId] = useState<string | null>(null);
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ["deleted-clients"],
     queryFn: async () => {
@@ -21,12 +23,44 @@ export default function Trash() {
     },
   });
 
-  const restore = async (id: string) => {
-    const { error } = await supabase.from("clients").update({ deleted_at: null }).eq("id", id);
-    if (error) return toast.error(error.message);
-    toast.success("Cliente restaurado");
+  const refresh = () => {
     qc.invalidateQueries({ queryKey: ["deleted-clients"] });
     qc.invalidateQueries({ queryKey: ["clients"] });
+    qc.invalidateQueries({ queryKey: ["docs"] });
+  };
+
+  const restore = async (id: string) => {
+    if (busyId) return;
+    setBusyId(id);
+    const { error } = await supabase.from("clients").update({ deleted_at: null }).eq("id", id);
+    setBusyId(null);
+    if (error) return toast.error("Não foi possível restaurar: " + error.message);
+    toast.success("Cliente restaurado");
+    refresh();
+  };
+
+  const permanentlyDelete = async (id: string, name: string) => {
+    if (busyId) return;
+    const approved = confirm(
+      `Excluir definitivamente ${name}? O cadastro não poderá ser restaurado depois dessa ação.`
+    );
+    if (!approved) return;
+
+    setBusyId(id);
+    const { data: deleted, error } = await supabase
+      .from("clients")
+      .delete()
+      .eq("id", id)
+      .select("id");
+    setBusyId(null);
+
+    if (error) return toast.error("Não foi possível excluir definitivamente: " + error.message);
+    if (!deleted?.length) {
+      return toast.error("O cadastro não foi excluído. Atualize a página e tente novamente.");
+    }
+
+    toast.success("Cliente excluído definitivamente");
+    refresh();
   };
 
   if (isLoading) return <Loading />;
@@ -35,7 +69,7 @@ export default function Trash() {
     <div>
       <PageHeader
         title="Lixeira"
-        subtitle="Clientes arquivados ficam aqui e podem ser restaurados pelo administrador."
+        subtitle="Clientes arquivados ficam aqui. O administrador pode restaurar ou excluir definitivamente."
       />
       {!clients.length ? (
         <Empty title="A lixeira está vazia">
@@ -43,28 +77,49 @@ export default function Trash() {
         </Empty>
       ) : (
         <div className="space-y-3">
-          {clients.map((client) => (
-            <div key={client.id} className="flex flex-col gap-3 rounded-xl border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="font-bold">{client.full_name}</p>
-                <p className="text-sm text-muted-foreground">
-                  WhatsApp: {client.whatsapp} · Fatura: {brl(client.avg_bill)}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Arquivado em {fmtDateTime(client.deleted_at)}
-                </p>
+          {clients.map((client) => {
+            const isBusy = busyId === client.id;
+            return (
+              <div
+                key={client.id}
+                className="flex flex-col gap-3 rounded-xl border bg-card p-4 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div>
+                  <p className="font-bold">{client.full_name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    WhatsApp: {client.whatsapp} · Fatura: {brl(client.avg_bill)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Arquivado em {fmtDateTime(client.deleted_at)}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2 sm:justify-end">
+                  <Button
+                    variant="outline"
+                    disabled={!!busyId}
+                    onClick={() => restore(client.id)}
+                  >
+                    {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                    Restaurar
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    disabled={!!busyId}
+                    onClick={() => permanentlyDelete(client.id, client.full_name)}
+                  >
+                    {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                    Excluir definitivamente
+                  </Button>
+                </div>
               </div>
-              <Button variant="outline" onClick={() => restore(client.id)}>
-                <RotateCcw className="h-4 w-4" />
-                Restaurar cliente
-              </Button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
-      <div className="mt-5 flex items-center gap-2 text-xs text-muted-foreground">
-        <Trash2 className="h-4 w-4" />
-        A exclusão é reversível para evitar perda acidental de dados.
+      <div className="mt-5 flex items-start gap-2 text-xs text-muted-foreground">
+        <Trash2 className="mt-0.5 h-4 w-4 shrink-0" />
+        Restaurar devolve o cadastro para a lista de clientes. A exclusão definitiva não pode ser desfeita.
       </div>
     </div>
   );
