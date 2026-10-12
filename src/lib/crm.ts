@@ -8,9 +8,21 @@ export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 export type Bonus = Database["public"]["Tables"]["bonuses"]["Row"];
 export type MonthlyRevenue = Database["public"]["Tables"]["monthly_revenues"]["Row"];
 
-/** Regras financeiras fixas (também aplicadas no banco). */
+/** Regras financeiras da operação. */
 export const REVENUE_PERCENT = 0.04;
-export const BONUS_AMOUNT = 25;
+
+export const COMMISSION_GOALS = [
+  { people: 10, amount: 500 },
+  { people: 50, amount: 5000 },
+  { people: 100, amount: 10000 },
+  { people: 200, amount: 20000 },
+] as const;
+
+export const getCommissionGoal = (people: number) =>
+  [...COMMISSION_GOALS].reverse().find((goal) => people >= goal.people)?.amount ?? 0;
+
+export const getNextCommissionGoal = (people: number) =>
+  COMMISSION_GOALS.find((goal) => people < goal.people) ?? null;
 
 export const STATUSES: { value: ClientStatus; label: string }[] = [
   { value: "novo", label: "Novo potencial cliente" },
