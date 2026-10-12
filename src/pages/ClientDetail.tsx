@@ -1,12 +1,12 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, FileText, Upload, Eye, MessageCircle, Send } from "lucide-react";
+import { ArrowLeft, Download, FileText, Upload, Eye, MessageCircle, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfiles } from "@/hooks/useCrmData";
-import { BONUS_AMOUNT, DOC_STATUSES, DOC_TYPES, ORIGINS, STATUSES, brl, calcRevenue, fmtDate, fmtDateTime, fmtMonth, fmtWhatsapp, normalizeWhatsapp, statusLabel, pendencies, type ClientStatus, type DocStatus, type DocType } from "@/lib/crm";
-import { openDoc, uploadDoc, validatePdf } from "@/lib/docs";
+import { DOC_STATUSES, DOC_TYPES, ORIGINS, STATUSES, brl, calcRevenue, fmtDate, fmtDateTime, fmtMonth, fmtWhatsapp, normalizeWhatsapp, statusLabel, pendencies, type ClientStatus, type DocStatus, type DocType } from "@/lib/crm";
+import { downloadDoc, openDoc, uploadDoc, validatePdf } from "@/lib/docs";
 import { StatusBadge, DocBadge } from "@/components/crm/StatusBadge";
 import { Loading, Empty } from "@/components/crm/States";
 import { WhatsappActions } from "@/components/crm/WhatsappActions";
@@ -30,14 +30,13 @@ export default function ClientDetail() {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["client", id],
     queryFn: async () => {
-      const [c, d, h, b, r] = await Promise.all([
+      const [c, d, h, r] = await Promise.all([
         supabase.from("clients").select("*").eq("id", id!).maybeSingle(),
         supabase.from("client_documents").select("*").eq("client_id", id!).order("uploaded_at", { ascending: false }),
         supabase.from("client_history").select("*").eq("client_id", id!).order("created_at", { ascending: false }),
-        supabase.from("bonuses").select("*").eq("client_id", id!).maybeSingle(),
         supabase.from("monthly_revenues").select("*").eq("client_id", id!).order("reference_month", { ascending: false }),
       ]);
-      return { client: c.data, docs: d.data ?? [], history: h.data ?? [], bonus: b.data, revenues: r.data ?? [] };
+      return { client: c.data, docs: d.data ?? [], history: h.data ?? [], revenues: r.data ?? [] };
     },
   });
   const { data: messages = [], isLoading: messagesLoading, refetch: refetchMessages } = useQuery({
@@ -75,7 +74,6 @@ export default function ClientDetail() {
     refetchMessages();
     qc.invalidateQueries({ queryKey: ["clients"] });
     qc.invalidateQueries({ queryKey: ["docs"] });
-    qc.invalidateQueries({ queryKey: ["bonuses"] });
   };
   const log = (kind: string, description: string) => supabase.from("client_history").insert({ client_id: c.id, user_id: user!.id, kind, description });
   const sendMessage = async (event: FormEvent) => {
@@ -136,11 +134,6 @@ export default function ClientDetail() {
     const err = validatePdf(file); if (err) return toast.error(err);
     try { await uploadDoc(c.id, t, file!, user!.id); toast.success("Documento enviado"); reload(); } catch (e) { toast.error("Falha no envio do documento"); }
   };
-  const confirmBonus = async () => {
-    const { error } = await supabase.from("bonuses").update({ status: "confirmada", confirmed_by: user!.id, confirmed_at: new Date().toISOString() }).eq("id", data.bonus!.id);
-    if (error) return toast.error(error.message);
-    await log("financeiro", "Bonificação de R$ 25,00 confirmada"); reload();
-  };
   const softDelete = async () => {
     if (!confirm("Arquivar este registro? Ele deixa de aparecer nas listas, mas o histórico é mantido.")) return;
     const { error } = await supabase.from("clients").update({ deleted_at: new Date().toISOString() }).eq("id", c.id);
@@ -175,14 +168,15 @@ export default function ClientDetail() {
       </div>
 
       {isAdmin ? (
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-xl border bg-card p-4"><p className="text-xs text-muted-foreground">Valor médio da fatura</p><p className="text-xl font-bold">{brl(c.avg_bill)}</p></div>
-          <div className="rounded-xl border bg-card p-4"><p className="text-xs text-muted-foreground">Receita bruta mensal estimada (4%)</p><p className="text-xl font-bold text-success">{brl(calcRevenue(c.avg_bill))}</p>
-            <p className="text-xs text-muted-foreground">{c.avg_bill != null ? brl(c.avg_bill) + " × 0,04" : "Informe o valor da fatura"}</p></div>
-          <div className="rounded-xl border bg-card p-4"><p className="text-xs text-muted-foreground">Bonificação única</p>
-            {data.bonus ? (<><p className="text-xl font-bold">{brl(data.bonus.amount)}</p><p className="text-xs">{data.bonus.status === "confirmada" ? `Confirmada em ${fmtDate(data.bonus.confirmed_at)}` : "Pendente"} · gerada {fmtDate(data.bonus.created_at)}</p>
-              {data.bonus.status === "pendente" && <Button size="sm" className="mt-2" onClick={confirmBonus}>Confirmar bonificação</Button>}</>)
-              : <p className="text-sm text-muted-foreground">Gerada ao atingir “Cadastro concluído” ({brl(BONUS_AMOUNT)}, uma única vez)</p>}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl border bg-card p-4">
+            <p className="text-xs text-muted-foreground">Valor médio da fatura</p>
+            <p className="text-xl font-bold">{brl(c.avg_bill)}</p>
+          </div>
+          <div className="rounded-xl border bg-card p-4">
+            <p className="text-xs text-muted-foreground">Recorrência mensal estimada (4%)</p>
+            <p className="text-xl font-bold text-success">{brl(calcRevenue(c.avg_bill))}</p>
+            <p className="text-xs text-muted-foreground">{c.avg_bill != null ? brl(c.avg_bill) + " × 0,04" : "Informe o valor da fatura"}</p>
           </div>
         </div>
       ) : (
@@ -233,7 +227,36 @@ export default function ClientDetail() {
                   <div className="flex items-center justify-between gap-2"><p className="flex items-center gap-2 text-sm font-semibold"><FileText className="h-4 w-4 text-primary" />{DOC_TYPES[t]}</p>{d ? <DocBadge status={d.status} /> : <DocBadge status="pendente" />}</div>
                   {d && <p className="mt-1 break-all text-xs text-muted-foreground">{d.file_name} · {fmtDateTime(d.uploaded_at)} · por {pname(d.uploaded_by)}</p>}
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {d && <Button size="sm" variant="outline" onClick={() => openDoc(d.file_path).catch(() => toast.error("Sem acesso ao arquivo"))}><Eye className="h-4 w-4" />Ver</Button>}
+                    {d && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={async () => {
+                            const popup = window.open("about:blank", "_blank");
+                            try {
+                              await openDoc(d.file_path, popup);
+                            } catch {
+                              popup?.close();
+                              toast.error("Não foi possível abrir o PDF. Verifique seu acesso.");
+                            }
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />Ver PDF
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            downloadDoc(d.file_path, d.file_name).catch(() =>
+                              toast.error("Não foi possível baixar o PDF. Verifique seu acesso.")
+                            )
+                          }
+                        >
+                          <Download className="h-4 w-4" />Baixar PDF
+                        </Button>
+                      </>
+                    )}
                     <Button size="sm" variant="outline" asChild><label className="cursor-pointer"><Upload className="h-4 w-4" />{d ? "Substituir" : "Enviar"}
                       <input type="file" accept="application/pdf" className="hidden" onChange={(e) => { replace(t, e.target.files?.[0]); e.target.value = ""; }} /></label></Button>
                     {d && <Select value={d.status} onValueChange={(v) => setDocStatus(d.id, v as DocStatus)}><SelectTrigger className="h-9 w-36"><SelectValue /></SelectTrigger>
