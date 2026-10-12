@@ -23,7 +23,7 @@ type Mode = "login" | "forgot";
 export default function Login() {
   const { user, loading } = useAuth();
   const [mode, setMode] = useState<Mode>("login");
-  const [email, setEmail] = useState(ADMIN_EMAIL);
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -86,13 +86,15 @@ export default function Login() {
           </p>
         </div>
 
-        <form onSubmit={submit} className="space-y-4">
+        <form onSubmit={submit} className="space-y-4" autoComplete="off">
           <div className="space-y-1.5">
             <Label htmlFor="email">E-mail autorizado</Label>
             <Input
               id="email"
+              name="login-email"
               type="email"
-              autoComplete="email"
+              inputMode="email"
+              autoComplete="off"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -103,8 +105,9 @@ export default function Login() {
               <Label htmlFor="pw">Senha</Label>
               <Input
                 id="pw"
+                name="login-password"
                 type="password"
-                autoComplete="current-password"
+                autoComplete="off"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
