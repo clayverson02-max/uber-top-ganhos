@@ -1,5 +1,5 @@
 import { ChangeEvent, FormEvent, useMemo, useState } from "react";
-import { CheckCircle2, ExternalLink, Info, MapPin, MessageCircle, Phone, UserRound, X, Zap } from "lucide-react";
+import { CheckCircle2, ExternalLink, FileCheck2, Info, MapPin, MessageCircle, Phone, Upload, UserRound, X, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,10 @@ export default function PublicRegistration() {
   const [submitted, setSubmitted] = useState(false);
   const [leadId, setLeadId] = useState<string | null>(null);
   const [showSelfRegistrationInfo, setShowSelfRegistrationInfo] = useState(false);
+  const [energyBill, setEnergyBill] = useState<File | null>(null);
+  const [identityDocument, setIdentityDocument] = useState<File | null>(null);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [documentsSent, setDocumentsSent] = useState(false);
 
   const consultantMessage = useMemo(() => [
     "Olá! Quero fazer meu cadastro gratuito com ajuda de um consultor da Conta Amiga.",
@@ -71,11 +75,56 @@ export default function PublicRegistration() {
     toast({ title: "Dados recebidos!", description: "Agora escolha como quer continuar." });
   }
 
+  function trackEvent(eventType: "self_registration" | "consultant_whatsapp") {
+    if (leadId) void supabase.from("public_registration_events").insert({ lead_id: leadId, event_type: eventType });
+  }
+
   function trackAndOpen(eventType: "self_registration" | "consultant_whatsapp", url: string) {
-    if (leadId) {
-      void supabase.from("public_registration_events").insert({ lead_id: leadId, event_type: eventType });
-    }
+    trackEvent(eventType);
     window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+  async function handleDocumentUpload() {
+    if (!leadId || !energyBill || !identityDocument) {
+      toast({ title: "Selecione os dois documentos.", description: "Precisamos da conta de energia e de um documento com foto.", variant: "destructive" });
+      return;
+    }
+    const allowed = (file: File) => file.type === "application/pdf" || file.type === "image/jpeg" || file.type === "image/png";
+    if (![energyBill, identityDocument].every(allowed)) {
+      toast({ title: "Formato não aceito.", description: "Envie PDF, JPG ou PNG.", variant: "destructive" });
+      return;
+    }
+    if ([energyBill, identityDocument].some((file) => file.size > 10 * 1024 * 1024)) {
+      toast({ title: "Arquivo muito grande.", description: "Cada arquivo deve ter no máximo 10 MB.", variant: "destructive" });
+      return;
+    }
+    setDocumentsLoading(true);
+    const uploads = [
+      { file: energyBill, docType: "energy_bill" as const },
+      { file: identityDocument, docType: "identity" as const },
+    ];
+    for (const item of uploads) {
+      const safeName = item.file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+      const path = "public-leads/" + leadId + "/" + item.docType + "-" + crypto.randomUUID() + "-" + safeName;
+      const { error: uploadError } = await supabase.storage.from("client-docs").upload(path, item.file, { contentType: item.file.type, upsert: false });
+      if (uploadError) {
+        setDocumentsLoading(false);
+        toast({ title: "Não foi possível enviar os documentos.", description: "Confira os arquivos e tente novamente.", variant: "destructive" });
+        return;
+      }
+      const { error: metadataError } = await supabase.from("public_registration_documents").insert({
+        lead_id: leadId, doc_type: item.docType, file_name: item.file.name, file_path: path, content_type: item.file.type,
+      });
+      if (metadataError) {
+        await supabase.storage.from("client-docs").remove([path]);
+        setDocumentsLoading(false);
+        toast({ title: "Não foi possível registrar os documentos.", description: "Tente novamente em alguns instantes.", variant: "destructive" });
+        return;
+      }
+    }
+    setDocumentsLoading(false);
+    setDocumentsSent(true);
+    toast({ title: "Documentos enviados!", description: "Nossa equipe fará a análise do cadastro." });
   }
 
   return (
@@ -128,11 +177,19 @@ export default function PublicRegistration() {
       </div>
 
       {showSelfRegistrationInfo && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-4 sm:items-center" role="dialog" aria-modal="true" aria-labelledby="self-registration-title">
+        <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-slate-950/60 p-4 sm:items-center" role="dialog" aria-modal="true" aria-labelledby="self-registration-title">
           <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl sm:p-8">
-            <div className="flex items-start justify-between gap-4"><div><p className="text-sm font-bold uppercase tracking-wide text-emerald-600">Cadastro gratuito</p><h2 id="self-registration-title" className="mt-1 text-2xl font-extrabold text-slate-900">Como funciona?</h2></div><button type="button" onClick={() => setShowSelfRegistrationInfo(false)} aria-label="Fechar explicação" className="rounded-full p-2 text-slate-500 hover:bg-slate-100"><X className="h-5 w-5" /></button></div>
-            <div className="mt-5 space-y-3 text-sm leading-6 text-slate-700"><p>Você será direcionado ao cadastro oficial da iGreen para concluir sua adesão individual.</p><p>O cadastro é gratuito. A plataforma analisa os dados informados e mostra as condições disponíveis para sua região.</p><p>Depois de concluir, se precisar de ajuda, nossa equipe estará disponível pelo WhatsApp.</p></div>
-            <Button onClick={() => trackAndOpen("self_registration", IGREEN_SELF_LINK)} className="mt-6 h-12 w-full rounded-xl bg-emerald-600 font-extrabold text-white hover:bg-emerald-700">Abrir cadastro oficial <ExternalLink className="ml-2 h-4 w-4" /></Button>
+            <div className="flex items-start justify-between gap-4"><div><p className="text-sm font-bold uppercase tracking-wide text-emerald-600">Análise gratuita</p><h2 id="self-registration-title" className="mt-1 text-2xl font-extrabold text-slate-900">Separe estes documentos</h2></div><button type="button" onClick={() => setShowSelfRegistrationInfo(false)} aria-label="Fechar explicação" className="rounded-full p-2 text-slate-500 hover:bg-slate-100"><X className="h-5 w-5" /></button></div>
+            <div className="mt-5 space-y-3 text-sm leading-6 text-slate-700"><p>Vamos analisar seu cadastro para verificar se você pode receber o benefício. Isso não garante aprovação antes da análise.</p><p><strong>Importante:</strong> o nome do titular deve ser o mesmo nome que aparece na conta de energia.</p><p>Envie de preferência a <strong>conta de energia em PDF</strong> e a <strong>CNH Digital ou RG em PDF</strong>. Os arquivos não podem ter senha.</p></div>
+            {!documentsSent ? (
+              <div className="mt-5 space-y-4">
+                <label className="block rounded-2xl border-2 border-dashed border-emerald-200 bg-emerald-50/60 p-4"><span className="flex items-center gap-2 font-bold text-slate-900"><FileCheck2 className="h-5 w-5 text-emerald-600" />Conta de energia</span><span className="mt-1 block text-xs text-slate-600">PDF recomendado, no nome do titular</span><input type="file" accept=".pdf,application/pdf,image/jpeg,image/png" onChange={(event) => setEnergyBill(event.target.files?.[0] ?? null)} className="mt-3 block w-full text-sm" /></label>
+                <label className="block rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 p-4"><span className="flex items-center gap-2 font-bold text-slate-900"><Upload className="h-5 w-5 text-slate-600" />CNH Digital ou RG</span><span className="mt-1 block text-xs text-slate-600">PDF recomendado; imagem legível também é aceita</span><input type="file" accept=".pdf,application/pdf,image/jpeg,image/png" onChange={(event) => setIdentityDocument(event.target.files?.[0] ?? null)} className="mt-3 block w-full text-sm" /></label>
+                <Button onClick={handleDocumentUpload} disabled={documentsLoading} className="h-12 w-full rounded-xl bg-emerald-600 font-extrabold text-white hover:bg-emerald-700">{documentsLoading ? "Enviando documentos..." : "Enviar documentos para análise"}</Button>
+              </div>
+            ) : (
+              <div className="mt-5 rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-950"><p className="flex items-center gap-2 font-bold"><CheckCircle2 className="h-5 w-5 text-emerald-600" />Documentos recebidos com segurança.</p><p className="mt-2">Nossa equipe fará a análise. Se desejar, você também pode concluir seu cadastro no site oficial.</p><Button onClick={() => window.open(IGREEN_SELF_LINK, "_blank", "noopener,noreferrer")} className="mt-4 h-12 w-full rounded-xl bg-emerald-600 font-extrabold text-white hover:bg-emerald-700">Abrir cadastro oficial <ExternalLink className="ml-2 h-4 w-4" /></Button></div>
+            )}
           </div>
         </div>
       )}
