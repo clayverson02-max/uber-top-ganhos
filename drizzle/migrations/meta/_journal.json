@@ -29,6 +29,13 @@
       "when": 1791903939889,
       "tag": "0003_add_internal_employee_role",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791903965694,
+      "tag": "0004_configure_internal_employee_roles",
+      "breakpoints": true
     }
   ]
 }
