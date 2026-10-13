@@ -15,6 +15,7 @@ import Finance from "./pages/Finance";
 import UsersPage from "./pages/Users";
 import Trash from "./pages/Trash";
 import NotFound from "./pages/NotFound";
+import PublicRegistration from "./pages/PublicRegistration";
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: false } } });
 
@@ -34,8 +35,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/reset-password" element={<ResetPassword />} />
 
-            {/* Rotas antigas de cadastro não exibem formulário e retornam ao login. */}
-            <Route path="/cadastro" element={<Navigate to="/login" replace />} />
+            <Route path="/cadastro" element={<PublicRegistration />} />
             <Route path="/signup" element={<Navigate to="/login" replace />} />
             <Route path="/register" element={<Navigate to="/login" replace />} />
 
