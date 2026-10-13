@@ -16,6 +16,7 @@ import UsersPage from "./pages/Users";
 import Trash from "./pages/Trash";
 import NotFound from "./pages/NotFound";
 import PublicRegistration from "./pages/PublicRegistration";
+import PublicLeads from "./pages/PublicLeads";
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: false } } });
 
@@ -42,6 +43,7 @@ const App = () => (
             <Route element={<AppLayout />}>
               <Route path="/" element={<Home />} />
               <Route path="/clientes" element={<ClientsAccess><Clients /></ClientsAccess>} />
+              <Route path="/captacoes" element={<ClientsAccess><PublicLeads /></ClientsAccess>} />
               <Route path="/clientes/:id" element={<MemberAccess><ClientDetail /></MemberAccess>} />
               <Route path="/novo" element={<NewClient />} />
               <Route path="/remarketing" element={<AdminOnly><Remarketing /></AdminOnly>} />
