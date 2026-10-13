@@ -36,6 +36,20 @@
       "when": 1791903965694,
       "tag": "0004_configure_internal_employee_roles",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791903984780,
+      "tag": "0005_configure_internal_document_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791903992521,
+      "tag": "0006_add_client_chat_and_trash_protection",
+      "breakpoints": true
     }
   ]
 }
