@@ -49,22 +49,24 @@ export default function PublicRegistration() {
       return;
     }
 
+    const newLeadId = crypto.randomUUID();
     setLoading(true);
-    const { data, error } = await supabase.from("public_registration_leads").insert({
+    const { error } = await supabase.from("public_registration_leads").insert({
+      id: newLeadId,
       full_name: form.full_name.trim(),
       whatsapp,
       city: form.city.trim(),
       source: "public_cadastro",
       status: "capturado",
-    }).select("id").single();
+    });
     setLoading(false);
 
-    if (error || !data) {
+    if (error) {
       toast({ title: "Não foi possível concluir agora.", description: "Tente novamente em alguns instantes.", variant: "destructive" });
       return;
     }
 
-    setLeadId(data.id);
+    setLeadId(newLeadId);
     setSubmitted(true);
     toast({ title: "Dados recebidos!", description: "Agora escolha como quer continuar." });
   }
