@@ -26,13 +26,7 @@ export default function UsersPage() {
     let operationError: { message?: string } | null = null;
     let responseError: string | null = null;
 
-    if (body.action === "set_role") {
-      const { error } = await supabase.rpc("set_staff_role", {
-        _user_id: String(body.user_id),
-        _role: String(body.role) as "equipe" | "interno",
-      });
-      operationError = error;
-    } else {
+    {
       const { data: res, error } = await supabase.functions.invoke("admin-users", { body });
       operationError = error;
       responseError = res?.error ?? null;
