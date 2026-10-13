@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.18"
+    PostgrestVersion: "14.15"
   }
   public: {
     Tables: {
@@ -53,20 +53,6 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "bonuses_confirmed_by_fkey"
-            columns: ["confirmed_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "bonuses_responsible_id_fkey"
-            columns: ["responsible_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
         ]
       }
       client_documents: {
@@ -90,7 +76,7 @@ export type Database = {
           is_current?: boolean
           status?: Database["public"]["Enums"]["doc_status"]
           uploaded_at?: string
-          uploaded_by: string
+          uploaded_by?: string
         }
         Update: {
           client_id?: string
@@ -109,13 +95,6 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "client_documents_uploaded_by_fkey"
-            columns: ["uploaded_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -153,76 +132,21 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "client_history_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      client_messages: {
-        Row: {
-          client_id: string
-          created_at: string
-          id: string
-          message: string
-          sender_id: string
-        }
-        Insert: {
-          client_id: string
-          created_at?: string
-          id?: string
-          message: string
-          sender_id: string
-        }
-        Update: {
-          client_id?: string
-          created_at?: string
-          id?: string
-          message?: string
-          sender_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "client_messages_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "client_messages_sender_id_fkey"
-            columns: ["sender_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
         ]
       }
       clients: {
         Row: {
           avg_bill: number | null
-          bairro: string | null
-          cep: string | null
-          cidade: string | null
           code: number
-          complemento: string | null
-          consumo_medio_kwh: number | null
           created_at: string
           created_by: string
           deleted_at: string | null
           email: string
-          estado: string | null
           full_name: string
           id: string
           last_contact_at: string | null
-          logradouro: string | null
           next_contact_at: string | null
           notes: string | null
-          numero: string | null
-          numero_instalacao: string | null
           origin: string
           responsible_id: string | null
           status: Database["public"]["Enums"]["client_status"]
@@ -232,25 +156,16 @@ export type Database = {
         }
         Insert: {
           avg_bill?: number | null
-          bairro?: string | null
-          cep?: string | null
-          cidade?: string | null
-          code?: never
-          complemento?: string | null
-          consumo_medio_kwh?: number | null
+          code?: number
           created_at?: string
-          created_by: string
+          created_by?: string
           deleted_at?: string | null
           email: string
-          estado?: string | null
           full_name: string
           id?: string
           last_contact_at?: string | null
-          logradouro?: string | null
           next_contact_at?: string | null
           notes?: string | null
-          numero?: string | null
-          numero_instalacao?: string | null
           origin: string
           responsible_id?: string | null
           status?: Database["public"]["Enums"]["client_status"]
@@ -260,25 +175,16 @@ export type Database = {
         }
         Update: {
           avg_bill?: number | null
-          bairro?: string | null
-          cep?: string | null
-          cidade?: string | null
-          code?: never
-          complemento?: string | null
-          consumo_medio_kwh?: number | null
+          code?: number
           created_at?: string
           created_by?: string
           deleted_at?: string | null
           email?: string
-          estado?: string | null
           full_name?: string
           id?: string
           last_contact_at?: string | null
-          logradouro?: string | null
           next_contact_at?: string | null
           notes?: string | null
-          numero?: string | null
-          numero_instalacao?: string | null
           origin?: string
           responsible_id?: string | null
           status?: Database["public"]["Enums"]["client_status"]
@@ -286,22 +192,7 @@ export type Database = {
           updated_at?: string
           whatsapp?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "clients_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "clients_responsible_id_fkey"
-            columns: ["responsible_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       leads: {
         Row: {
@@ -362,7 +253,7 @@ export type Database = {
           percent: number
           receipt_status: string
           reference_month: string
-          revenue: number
+          revenue: number | null
         }
         Insert: {
           bill_amount: number
@@ -374,7 +265,7 @@ export type Database = {
           percent?: number
           receipt_status?: string
           reference_month: string
-          revenue?: number
+          revenue?: number | null
         }
         Update: {
           bill_amount?: number
@@ -386,7 +277,7 @@ export type Database = {
           percent?: number
           receipt_status?: string
           reference_month?: string
-          revenue?: number
+          revenue?: number | null
         }
         Relationships: [
           {
@@ -397,39 +288,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      public_registration_leads: {
-        Row: {
-          city: string
-          created_at: string
-          full_name: string
-          id: string
-          source: string
-          status: string
-          updated_at: string
-          whatsapp: string
-        }
-        Insert: {
-          city: string
-          created_at?: string
-          full_name: string
-          id?: string
-          source?: string
-          status?: string
-          updated_at?: string
-          whatsapp: string
-        }
-        Update: {
-          city?: string
-          created_at?: string
-          full_name?: string
-          id?: string
-          source?: string
-          status?: string
-          updated_at?: string
-          whatsapp?: string
-        }
-        Relationships: []
       }
       profiles: {
         Row: {
@@ -478,6 +336,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_exists: { Args: never; Returns: boolean }
       can_access_client: { Args: { _client: string }; Returns: boolean }
       find_duplicates: {
         Args: { _email: string; _exclude?: string; _whatsapp: string }
@@ -498,16 +357,9 @@ export type Database = {
         Returns: boolean
       }
       is_member: { Args: { _user_id: string }; Returns: boolean }
-      set_staff_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: undefined
-      }
     }
     Enums: {
-      app_role: "admin" | "equipe" | "interno"
+      app_role: "admin" | "equipe"
       client_status:
         | "novo"
         | "primeiro_contato"
@@ -652,7 +504,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "equipe", "interno"],
+      app_role: ["admin", "equipe"],
       client_status: [
         "novo",
         "primeiro_contato",
