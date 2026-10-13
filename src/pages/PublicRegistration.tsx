@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useMemo, useState } from "react";
 import { CheckCircle2, ExternalLink, MapPin, MessageCircle, Phone, UserRound, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -36,7 +36,7 @@ export default function PublicRegistration() {
 
   const consultantLink = `https://wa.me/?text=${encodeURIComponent(consultantMessage)}`;
 
-  const update = (field: keyof FormState) => (event: React.ChangeEvent<HTMLInputElement>) =>
+  const update = (field: keyof FormState) => (event: ChangeEvent<HTMLInputElement>) =>
     setForm((current) => ({ ...current, [field]: event.target.value }));
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
