@@ -135,16 +135,16 @@ export default function PublicRegistration() {
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-accent-foreground"><Zap className="h-5 w-5" /></span>
             Conta Amiga
           </div>
-          <p className="mb-3 text-sm font-bold uppercase tracking-[0.18em] text-emerald-200">Cadastro gratuito</p>
-          <h1 className="text-3xl font-extrabold leading-tight sm:text-4xl">Comece seu cadastro em menos de 1 minuto</h1>
-          <p className="mt-4 text-sm leading-6 text-white/85 sm:text-base">Informe apenas seu nome, WhatsApp e cidade. Depois você escolhe se quer concluir sozinho ou receber ajuda de um consultor.</p>
+          <p className="mb-3 text-sm font-bold uppercase tracking-[0.18em] text-emerald-200">Análise gratuita</p>
+          <h1 className="text-3xl font-extrabold leading-tight sm:text-4xl">Faça sua análise em poucos minutos</h1>
+          <p className="mt-4 text-sm leading-6 text-white/85 sm:text-base">Informe seus dados para verificar se você pode receber o benefício. Depois escolha enviar os documentos pelo site ou falar com um consultor.</p>
         </header>
 
         {!submitted ? (
           <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-lg shadow-slate-900/5 sm:p-7">
             <div className="mb-6 flex items-start gap-3 rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-950">
               <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
-              <p><strong>É simples e gratuito:</strong> preencha os 3 dados abaixo para liberar as duas formas de cadastro.</p>
+              <p><strong>É simples e gratuito:</strong> informe seus dados para iniciar a análise.</p>
             </div>
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2"><Label htmlFor="public-name" className="font-bold text-slate-800">Nome completo</Label><div className="relative"><UserRound className="pointer-events-none absolute left-3 top-3 h-5 w-5 text-slate-400" /><Input id="public-name" value={form.full_name} onChange={update("full_name")} placeholder="Como podemos chamar você?" className="h-12 pl-10" autoComplete="name" /></div></div>
