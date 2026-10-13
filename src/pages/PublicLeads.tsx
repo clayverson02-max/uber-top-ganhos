@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";\nimport { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { FileText, MapPin, MessageCircle, Phone, UserRoundSearch } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 type PublicLead = { id: string; full_name: string; whatsapp: string; city: string; status: string; created_at: string; };
-type PublicEvent = { lead_id: string; event_type: "self_registration" | "consultant_whatsapp"; };\ntype PublicDocument = { id: string; lead_id: string; doc_type: "energy_bill" | "identity"; file_name: string; file_path: string; };\n\nfunction DocumentLinks({ documents }: { documents: PublicDocument[] }) {\n  const [opening, setOpening] = useState<string | null>(null);\n  async function openDocument(document: PublicDocument) {\n    setOpening(document.id);\n    const { data, error } = await supabase.storage.from("client-docs").createSignedUrl(document.file_path, 600);\n    setOpening(null);\n    if (error || !data?.signedUrl) return;\n    window.open(data.signedUrl, "_blank", "noopener,noreferrer");\n  }\n  return <div className="mt-2 flex flex-wrap gap-2">{documents.map((document) => <Button key={document.id} variant="outline" size="sm" disabled={opening === document.id} onClick={() => openDocument(document)}><FileText className="mr-1.5 h-4 w-4" />{document.doc_type === "energy_bill" ? "Conta de energia" : "Documento"}</Button>)}</div>;\n}
+type PublicEvent = { lead_id: string; event_type: "self_registration" | "consultant_whatsapp"; };
+type PublicDocument = { id: string; lead_id: string; doc_type: "energy_bill" | "identity"; file_name: string; file_path: string; };
+
+function DocumentLinks({ documents }: { documents: PublicDocument[] }) {
+  const [opening, setOpening] = useState<string | null>(null);
+  async function openDocument(document: PublicDocument) {
+    setOpening(document.id);
+    const { data, error } = await supabase.storage.from("client-docs").createSignedUrl(document.file_path, 600);
+    setOpening(null);
+    if (error || !data?.signedUrl) return;
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  }
+  return <div className="mt-2 flex flex-wrap gap-2">{documents.map((document) => <Button key={document.id} variant="outline" size="sm" disabled={opening === document.id} onClick={() => openDocument(document)}><FileText className="mr-1.5 h-4 w-4" />{document.doc_type === "energy_bill" ? "Conta de energia" : "Documento"}</Button>)}</div>;
+}
 
 const statusLabel: Record<string, string> = { capturado: "Novo", em_atendimento: "Em atendimento", convertido: "Concluído", descartado: "Descartado" };
 
@@ -27,11 +41,13 @@ export default function PublicLeads() {
       if (leadsError) throw leadsError;
       if (eventsError) throw eventsError;
       if (documentsError) throw documentsError;
-      const eventRows = (events ?? []) as PublicEvent[];\n      const documentRows = (documents ?? []) as PublicDocument[];
+      const eventRows = (events ?? []) as PublicEvent[];
+      const documentRows = (documents ?? []) as PublicDocument[];
       const siteClicks = new Set(eventRows.filter((event) => event.event_type === "self_registration").map((event) => event.lead_id)).size;
       const consultantClicks = new Set(eventRows.filter((event) => event.event_type === "consultant_whatsapp").map((event) => event.lead_id)).size;
       const eventsByLead = eventRows.reduce<Record<string, PublicEvent[]>>((acc, event) => { (acc[event.lead_id] ??= []).push(event); return acc; }, {});
-      const documentsByLead = documentRows.reduce<Record<string, PublicDocument[]>>((acc, document) => { (acc[document.lead_id] ??= []).push(document); return acc; }, {});\n      return { leads: (leads ?? []) as PublicLead[], siteClicks, consultantClicks, eventsByLead, documentsByLead };
+      const documentsByLead = documentRows.reduce<Record<string, PublicDocument[]>>((acc, document) => { (acc[document.lead_id] ??= []).push(document); return acc; }, {});
+      return { leads: (leads ?? []) as PublicLead[], siteClicks, consultantClicks, eventsByLead, documentsByLead };
     },
   });
 
