@@ -26,8 +26,8 @@ export default function PublicLeads() {
       if (leadsError) throw leadsError;
       if (eventsError) throw eventsError;
       const eventRows = (events ?? []) as PublicEvent[];
-      const siteClicks = eventRows.filter((event) => event.event_type === "self_registration").length;
-      const consultantClicks = eventRows.filter((event) => event.event_type === "consultant_whatsapp").length;
+      const siteClicks = new Set(eventRows.filter((event) => event.event_type === "self_registration").map((event) => event.lead_id)).size;
+      const consultantClicks = new Set(eventRows.filter((event) => event.event_type === "consultant_whatsapp").map((event) => event.lead_id)).size;
       const eventsByLead = eventRows.reduce<Record<string, PublicEvent[]>>((acc, event) => { (acc[event.lead_id] ??= []).push(event); return acc; }, {});
       return { leads: (leads ?? []) as PublicLead[], siteClicks, consultantClicks, eventsByLead };
     },
@@ -39,8 +39,8 @@ export default function PublicLeads() {
       <div><p className="text-sm font-semibold uppercase tracking-wide text-primary">Entrada do site</p><h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">Captações de cadastro</h1><p className="mt-1 text-sm text-muted-foreground">Acompanhe quem chegou pelo link e qual caminho escolheu.</p></div>
       <div className="grid gap-3 sm:grid-cols-3">
         <Card><CardContent className="p-5"><p className="text-sm text-muted-foreground">Pessoas captadas</p><p className="mt-1 text-3xl font-extrabold">{isLoading ? "…" : leads.length}</p></CardContent></Card>
-        <Card><CardContent className="p-5"><p className="text-sm text-muted-foreground">Clicaram no cadastro individual</p><p className="mt-1 text-3xl font-extrabold text-emerald-600">{isLoading ? "…" : data?.siteClicks ?? 0}</p></CardContent></Card>
-        <Card><CardContent className="p-5"><p className="text-sm text-muted-foreground">Clicaram no consultor</p><p className="mt-1 text-3xl font-extrabold text-primary">{isLoading ? "…" : data?.consultantClicks ?? 0}</p></CardContent></Card>
+        <Card><CardContent className="p-5"><p className="text-sm text-muted-foreground">Foram para cadastro individual</p><p className="mt-1 text-3xl font-extrabold text-emerald-600">{isLoading ? "…" : data?.siteClicks ?? 0}</p></CardContent></Card>
+        <Card><CardContent className="p-5"><p className="text-sm text-muted-foreground">Escolheram falar com consultor</p><p className="mt-1 text-3xl font-extrabold text-primary">{isLoading ? "…" : data?.consultantClicks ?? 0}</p></CardContent></Card>
       </div>
       <Card>
         <CardHeader className="flex-row items-center justify-between"><CardTitle className="flex items-center gap-2 text-lg"><UserRoundSearch className="h-5 w-5 text-primary" />Últimas captações</CardTitle><Badge variant="secondary">{leads.length}</Badge></CardHeader>
