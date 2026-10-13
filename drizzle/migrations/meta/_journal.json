@@ -22,6 +22,13 @@
       "when": 1791903927693,
       "tag": "0002_simplify_staff_registration_access",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791903939889,
+      "tag": "0003_add_internal_employee_role",
+      "breakpoints": true
     }
   ]
 }
