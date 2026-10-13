@@ -50,6 +50,13 @@
       "when": 1791903992521,
       "tag": "0006_add_client_chat_and_trash_protection",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791904017090,
+      "tag": "0007_add_manual_client_fields",
+      "breakpoints": true
     }
   ]
 }
