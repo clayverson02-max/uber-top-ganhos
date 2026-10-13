@@ -384,6 +384,44 @@ export type Database = {
           },
         ]
       }
+      public_registration_documents: {
+        Row: {
+          content_type: string
+          created_at: string
+          doc_type: string
+          file_name: string
+          file_path: string
+          id: string
+          lead_id: string
+        }
+        Insert: {
+          content_type: string
+          created_at?: string
+          doc_type: string
+          file_name: string
+          file_path: string
+          id?: string
+          lead_id: string
+        }
+        Update: {
+          content_type?: string
+          created_at?: string
+          doc_type?: string
+          file_name?: string
+          file_path?: string
+          id?: string
+          lead_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_registration_documents_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "public_registration_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           active: boolean
