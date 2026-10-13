@@ -85,7 +85,7 @@ export default function NewClient() {
 
   const validateManualFields = () => {
     const manualErrors: Record<string, string> = {};
-    manualFields.forEach(({ key, label, optional }) => {
+    manualFields.forEach((field) => { const { key, label } = field; const optional = "optional" in field && field.optional;
       if (!optional && !f[key].trim()) {
         manualErrors[key] = "Informe " + label.toLowerCase() + " quando não houver o PDF";
       }
@@ -326,7 +326,7 @@ export default function NewClient() {
               {manualFields.map((field) => (
                 <div key={field.key} className="space-y-1.5">
                   <Label htmlFor={field.key}>
-                    {field.label}{field.optional ? " (opcional)" : " *"}
+                    {field.label}{"optional" in field && field.optional ? " (opcional)" : " *"}
                   </Label>
                   <Input
                     id={field.key}

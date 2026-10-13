@@ -8,6 +8,13 @@
       "when": 1791681461631,
       "tag": "0000_conta_amiga_crm",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791903863754,
+      "tag": "0001_add_public_registration_leads",
+      "breakpoints": true
     }
   ]
 }

@@ -313,6 +313,39 @@ export type Database = {
         }
         Relationships: []
       }
+      public_registration_leads: {
+        Row: {
+          city: string
+          created_at: string
+          full_name: string
+          id: string
+          source: string
+          status: string
+          updated_at: string
+          whatsapp: string
+        }
+        Insert: {
+          city: string
+          created_at?: string
+          full_name: string
+          id?: string
+          source?: string
+          status?: string
+          updated_at?: string
+          whatsapp: string
+        }
+        Update: {
+          city?: string
+          created_at?: string
+          full_name?: string
+          id?: string
+          source?: string
+          status?: string
+          updated_at?: string
+          whatsapp?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string

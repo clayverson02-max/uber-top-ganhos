@@ -62,7 +62,7 @@ export default function Login() {
     if (!parsed.success) return setError(parsed.error.issues[0].message);
 
     setBusy(true);
-    const { error: loginError } = await supabase.auth.signInWithPassword(parsed.data);
+    const { error: loginError } = await supabase.auth.signInWithPassword({ email: parsed.data.email as string, password: parsed.data.password as string });
     setBusy(false);
 
     if (loginError) {
