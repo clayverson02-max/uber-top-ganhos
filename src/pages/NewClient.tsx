@@ -150,7 +150,7 @@ export default function NewClient() {
       .insert({
         origin: "whatsapp",
         full_name: f.full_name.trim(),
-        email: "",
+        email: f.email.trim().toLowerCase(),
         whatsapp,
         avg_bill: bill,
         cep: f.cep.trim() || null,
@@ -162,7 +162,7 @@ export default function NewClient() {
         estado: f.estado.trim().toUpperCase() || null,
         consumo_medio_kwh: consumption,
         numero_instalacao: f.numero_instalacao.trim() || null,
-        responsible_id: user.id,
+        responsible_id: responsibleId || user.id,
         created_by: user.id,
         status: "cliente_ativo",
       })
