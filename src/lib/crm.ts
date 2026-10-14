@@ -106,3 +106,7 @@ export function pendencies(c: Client, docs: ClientDoc[]): string[] {
   if (c.stopped_responding) p.push("Parou de responder");
   return p;
 }
+
+/** Nome exibido do funcionário (nome amigável editável pelo administrador). */
+export const employeeName = (p: { display_name?: string | null; full_name?: string | null; email?: string | null } | null | undefined) =>
+  p ? (p.display_name?.trim() || p.full_name?.trim() || p.email || "Funcionário") : "Sem funcionário atribuído";
