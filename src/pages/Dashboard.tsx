@@ -1,4 +1,6 @@
 import { useMemo, useState, type ElementType, type ReactElement } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Bar,
   BarChart,
@@ -127,6 +129,15 @@ export default function Dashboard() {
   const { data: docs = [] } = useDocs();
   const { data: revenues = [] } = useRevenues();
   const { data: profiles = [] } = useProfiles();
+  const { data: employeeGoals = [] } = useQuery({
+    queryKey: ["employee-goals-dashboard"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).from("employee_goals").select("*");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const [performanceMonth, setPerformanceMonth] = useState(new Date().toISOString().slice(0, 7));
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [st, setSt] = useState("all");
@@ -218,6 +229,11 @@ export default function Dashboard() {
         .sort()
         .map((k) => ({ mes: mLabel(k), ...revMonth[k] })),
       byEmp: Object.entries(byEmp).map(([name, v]) => ({ name, cadastros: v })),
+      employeePerformance: profiles.map((profile) => {
+        const count = (clientsAll ?? []).filter((client) => mk(client.created_at) === performanceMonth && (client.responsible_id || client.created_by) === profile.id).length;
+        const goal = Number(employeeGoals.find((item: any) => item.user_id === profile.id)?.monthly_goal ?? 0);
+        return { id: profile.id, name: profile.display_name || profile.full_name || profile.email, count, goal, percentage: goal > 0 ? Math.min(100, Math.round((count / goal) * 100)) : 0 };
+      }).filter((item) => item.goal > 0 || item.count > 0),
       ativosInativos: [
         { name: "Ativos", value: ativos.length },
         {
@@ -232,8 +248,12 @@ export default function Dashboard() {
         ? withBill.reduce((sum, client) => sum + Number(client.avg_bill), 0) / withBill.length
         : null,
     };
-  }, [clientsAll, docs, revenues, profiles, from, to, st, or, emp]);
+  }, [clientsAll, docs, revenues, profiles, employeeGoals, performanceMonth, from, to, st, or, emp]);
 
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const previousDate = new Date();
+  previousDate.setMonth(previousDate.getMonth() - 1);
+  const previousMonth = previousDate.toISOString().slice(0, 7);
   if (isLoading) return <Loading />;
 
   const Box = ({ title, children }: { title: string; children: ReactElement }) => (
@@ -435,6 +455,39 @@ export default function Dashboard() {
           tone="warning"
         />
       </div>
+
+      <section className="mb-6 rounded-2xl border bg-card p-4 shadow-sm sm:p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-extrabold">Desempenho por funcionário</p>
+            <p className="mt-1 text-xs text-muted-foreground">Acompanhe a meta individual e os cadastros atribuídos no período.</p>
+          </div>
+          <Select value={performanceMonth} onValueChange={setPerformanceMonth}>
+            <SelectTrigger className="w-full sm:w-48"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value={currentMonth}>Este mês</SelectItem>
+              <SelectItem value={previousMonth}>Mês anterior</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {d.employeePerformance.length ? d.employeePerformance.map((item) => (
+            <div key={item.id} className="rounded-xl border bg-background p-4">
+              <div className="flex items-start justify-between gap-3">
+                <p className="font-bold">{item.name}</p>
+                <span className="text-sm font-extrabold text-primary">{item.count}/{item.goal || "—"}</span>
+              </div>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+                <div className="h-full rounded-full bg-primary transition-all" style={{ width: (item.goal ? item.percentage : 0) + "%" }} />
+              </div>
+              <div className="mt-2 flex justify-between text-xs text-muted-foreground">
+                <span>{item.goal ? item.percentage + "% da meta" : "Meta não definida"}</span>
+                <span>{item.goal ? Math.max(item.goal - item.count, 0) + " faltando" : item.count + " cadastro(s)"}</span>
+              </div>
+            </div>
+          )) : <p className="text-sm text-muted-foreground">Nenhum cadastro ou meta encontrada neste período.</p>}
+        </div>
+      </section>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Box title="Cadastros por mês">
