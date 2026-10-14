@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useQueryClient } from "@tanstack/react-query";
@@ -15,6 +16,7 @@ import { toast } from "sonner";
 
 const initialForm = {
   full_name: "",
+  email: "",
   whatsapp: "",
   avg_bill: "",
   cep: "",
@@ -42,6 +44,7 @@ const manualFields = [
 
 const schema = z.object({
   full_name: z.string().trim().min(3, "Informe o nome completo").max(150),
+  email: z.string().trim().email("Informe um e-mail válido").max(255),
   whatsapp: z.string().refine(
     (v) => /^55\d{10,11}$/.test(normalizeWhatsapp(v)),
     "Informe um WhatsApp válido com DDD"
@@ -79,6 +82,15 @@ export default function NewClient() {
   const [successMessage, setSuccessMessage] = useState("");
   const [formKey, setFormKey] = useState(0);
   const [createdClientId, setCreatedClientId] = useState<string | null>(null);
+  const [responsibleId, setResponsibleId] = useState("");
+  const { data: activeProfiles = [] } = useQuery({
+    queryKey: ["active-profiles-assignment"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("profiles").select("id, full_name, display_name, email, active").eq("active", true).order("full_name");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
   const set = (key: keyof typeof initialForm, value: string) =>
     setF((previous) => ({ ...previous, [key]: value }));
@@ -100,6 +112,7 @@ export default function NewClient() {
 
     const parsed = schema.safeParse(f);
     const nextErrors: Record<string, string> = {};
+    if (!user) nextErrors.responsible_id = "Usuário não autenticado";
     if (!parsed.success) {
       parsed.error.issues.forEach((issue) => {
         nextErrors[String(issue.path[0])] = issue.message;
