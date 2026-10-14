@@ -258,7 +258,41 @@ export type Database = {
           updated_at?: string
           whatsapp?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "clients_responsible_id_fkey"
+            columns: ["responsible_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_goals: {
+        Row: {
+          monthly_goal: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          monthly_goal?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          monthly_goal?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_goals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       leads: {
         Row: {
@@ -359,6 +393,7 @@ export type Database = {
         Row: {
           active: boolean
           created_at: string
+          display_name: string | null
           email: string
           full_name: string
           id: string
@@ -366,6 +401,7 @@ export type Database = {
         Insert: {
           active?: boolean
           created_at?: string
+          display_name?: string | null
           email?: string
           full_name?: string
           id: string
@@ -373,6 +409,7 @@ export type Database = {
         Update: {
           active?: boolean
           created_at?: string
+          display_name?: string | null
           email?: string
           full_name?: string
           id?: string
@@ -383,6 +420,7 @@ export type Database = {
         Row: {
           city: string
           created_at: string
+          email: string | null
           full_name: string
           id: string
           source: string
@@ -391,8 +429,9 @@ export type Database = {
           whatsapp: string
         }
         Insert: {
-          city: string
+          city?: string
           created_at?: string
+          email?: string | null
           full_name: string
           id?: string
           source?: string
@@ -403,6 +442,7 @@ export type Database = {
         Update: {
           city?: string
           created_at?: string
+          email?: string | null
           full_name?: string
           id?: string
           source?: string
