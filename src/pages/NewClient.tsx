@@ -279,6 +279,21 @@ export default function NewClient() {
         </div>
 
         <div className="space-y-1.5">
+          <Label htmlFor="email">E-mail *</Label>
+          <Input id="email" type="email" autoComplete="email" value={f.email} maxLength={255} onChange={(event) => set("email", event.target.value)} placeholder="cliente@exemplo.com" />
+          {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="responsible_id">Funcionário responsável *</Label>
+          <select id="responsible_id" value={responsibleId || user?.id || ""} onChange={(event) => setResponsibleId(event.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+            <option value="">Selecione o funcionário</option>
+            {activeProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.display_name || profile.full_name || profile.email}</option>)}
+          </select>
+          {errors.responsible_id && <p className="text-xs text-destructive">{errors.responsible_id}</p>}
+        </div>
+
+        <div className="space-y-1.5">
           <Label htmlFor="avg_bill">Quanto paga de energia por mês? *</Label>
           <Input
             id="avg_bill"
