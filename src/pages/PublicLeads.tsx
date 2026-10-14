@@ -35,14 +35,14 @@ export default function PublicLeads() {
     queryFn: async () => {
       const [{ data: leads, error: leadsError }, { data: events, error: eventsError }, { data: documents, error: documentsError }] = await Promise.all([
         supabase.from("public_registration_leads").select("*").order("created_at", { ascending: false }).limit(100),
-        supabase.from("public_registration_events").select("lead_id, event_type").limit(1000),
-        supabase.from("public_registration_documents").select("id, lead_id, doc_type, file_name, file_path").limit(200),
+        (supabase as any).from("public_registration_events").select("lead_id, event_type").limit(1000),
+        (supabase as any).from("public_registration_documents").select("id, lead_id, doc_type, file_name, file_path").limit(200),
       ]);
       if (leadsError) throw leadsError;
       if (eventsError) throw eventsError;
       if (documentsError) throw documentsError;
-      const eventRows = (events ?? []) as PublicEvent[];
-      const documentRows = (documents ?? []) as PublicDocument[];
+      const eventRows = (events ?? []) as unknown as PublicEvent[];
+      const documentRows = (documents ?? []) as unknown as PublicDocument[];
       const consultantClicks = new Set(eventRows.filter((event) => event.event_type === "consultant_whatsapp").map((event) => event.lead_id)).size;
       const eventsByLead = eventRows.reduce<Record<string, PublicEvent[]>>((acc, event) => { (acc[event.lead_id] ??= []).push(event); return acc; }, {});
       const documentsByLead = documentRows.reduce<Record<string, PublicDocument[]>>((acc, document) => { (acc[document.lead_id] ??= []).push(document); return acc; }, {});
