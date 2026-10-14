@@ -43,6 +43,8 @@ Deno.serve(async (req) => {
       const email = String(body.email ?? "").trim().toLowerCase();
       const password = String(body.password ?? "");
       const fullName = String(body.full_name ?? "").trim().slice(0, 120);
+      const displayName = String(body.display_name ?? "").trim().slice(0, 120) || fullName;
+      const monthlyGoal = Math.max(0, Number(body.monthly_goal ?? 0) || 0);
       const role = validRole(body.role) ?? "equipe";
 
       if (!/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email) || password.length < 8 || fullName.length < 2) {
@@ -62,11 +64,11 @@ Deno.serve(async (req) => {
       const { error: deleteRoleError } = await admin.from("user_roles").delete().eq("user_id", userId);
       const { error: insertRoleError } = await admin.from("user_roles").insert({ user_id: userId, role });
 
-      if (profileError || deleteRoleError || insertRoleError) {
+      if (profileError || goalError || deleteRoleError || insertRoleError) {
         await admin.auth.admin.deleteUser(userId);
         return json({ error: "Usuário criado, mas não foi possível configurar o perfil" }, 500);
       }
-      return json({ ok: true });
+      return json({ ok: true, user_id: userId });
     }
 
     if (action === "set_role") {
@@ -101,10 +103,13 @@ Deno.serve(async (req) => {
     if (action === "update") {
       const id = String(body.user_id ?? "");
       const fullName = String(body.full_name ?? "").trim().slice(0, 120);
+      const displayName = String(body.display_name ?? "").trim().slice(0, 120) || fullName;
+      const monthlyGoal = Math.max(0, Number(body.monthly_goal ?? 0) || 0);
       if (!id || fullName.length < 2) return json({ error: "Nome inválido" }, 400);
 
-      const { error } = await admin.from("profiles").update({ full_name: fullName }).eq("id", id);
-      if (error) return json({ error: error.message }, 500);
+      const { error } = await admin.from("profiles").update({ full_name: fullName, display_name: displayName }).eq("id", id);
+      const { error: goalError } = await admin.from("employee_goals").upsert({ user_id: id, monthly_goal: monthlyGoal }, { onConflict: "user_id" });
+      if (error || goalError) return json({ error: error?.message ?? goalError?.message ?? "Não foi possível atualizar" }, 500);
       return json({ ok: true });
     }
 
