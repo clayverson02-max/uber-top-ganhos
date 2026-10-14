@@ -57,6 +57,13 @@
       "when": 1791904017090,
       "tag": "0007_add_manual_client_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791992046246,
+      "tag": "0008_employee_goals_and_public_email",
+      "breakpoints": true
     }
   ]
 }

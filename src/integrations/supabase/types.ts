@@ -258,7 +258,41 @@ export type Database = {
           updated_at?: string
           whatsapp?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "clients_responsible_id_fkey"
+            columns: ["responsible_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_goals: {
+        Row: {
+          monthly_goal: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          monthly_goal?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          monthly_goal?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_goals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       leads: {
         Row: {
@@ -355,77 +389,11 @@ export type Database = {
           },
         ]
       }
-      public_registration_events: {
-        Row: {
-          created_at: string
-          event_type: string
-          id: string
-          lead_id: string
-        }
-        Insert: {
-          created_at?: string
-          event_type: string
-          id?: string
-          lead_id: string
-        }
-        Update: {
-          created_at?: string
-          event_type?: string
-          id?: string
-          lead_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "public_registration_events_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "public_registration_leads"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      public_registration_documents: {
-        Row: {
-          content_type: string
-          created_at: string
-          doc_type: string
-          file_name: string
-          file_path: string
-          id: string
-          lead_id: string
-        }
-        Insert: {
-          content_type: string
-          created_at?: string
-          doc_type: string
-          file_name: string
-          file_path: string
-          id?: string
-          lead_id: string
-        }
-        Update: {
-          content_type?: string
-          created_at?: string
-          doc_type?: string
-          file_name?: string
-          file_path?: string
-          id?: string
-          lead_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "public_registration_documents_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "public_registration_leads"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       profiles: {
         Row: {
           active: boolean
           created_at: string
+          display_name: string | null
           email: string
           full_name: string
           id: string
@@ -433,6 +401,7 @@ export type Database = {
         Insert: {
           active?: boolean
           created_at?: string
+          display_name?: string | null
           email?: string
           full_name?: string
           id: string
@@ -440,6 +409,7 @@ export type Database = {
         Update: {
           active?: boolean
           created_at?: string
+          display_name?: string | null
           email?: string
           full_name?: string
           id?: string
@@ -450,6 +420,7 @@ export type Database = {
         Row: {
           city: string
           created_at: string
+          email: string | null
           full_name: string
           id: string
           source: string
@@ -458,8 +429,9 @@ export type Database = {
           whatsapp: string
         }
         Insert: {
-          city: string
+          city?: string
           created_at?: string
+          email?: string | null
           full_name: string
           id?: string
           source?: string
@@ -470,6 +442,7 @@ export type Database = {
         Update: {
           city?: string
           created_at?: string
+          email?: string | null
           full_name?: string
           id?: string
           source?: string
