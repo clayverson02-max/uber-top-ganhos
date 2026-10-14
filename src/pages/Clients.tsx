@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useClients, useDocs, useProfiles } from "@/hooks/useCrmData";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { DOC_TYPES, STATUSES, ORIGINS, brl, calcRevenue, fmtDate, fmtWhatsapp, statusColor, pendencies } from "@/lib/crm";
+import { DOC_TYPES, STATUSES, ORIGINS, brl, calcRevenue, fmtDate, fmtWhatsapp, statusColor, pendencies, employeeName } from "@/lib/crm";
 import { StatusBadge } from "@/components/crm/StatusBadge";
 import { Empty, Loading, PageHeader } from "@/components/crm/States";
 import { WhatsappActions } from "@/components/crm/WhatsappActions";
@@ -31,16 +31,17 @@ export default function Clients() {
   const [sort, setSort] = useState("desc");
   const [view, setView] = useState<"table" | "kanban">("table");
   const [page, setPage] = useState(1);
-  const pname = (id: string | null) => profiles.find((p) => p.id === id)?.full_name || "—";
+  const pname = (id: string | null) => { const p = profiles.find((x) => x.id === id); return id && p ? employeeName(p) : "Sem funcionário atribuído"; };
 
   const list = useMemo(() => {
     const s = q.trim().toLowerCase();
     const digits = s.replace(/\D/g, "");
     return (clients ?? []).filter((c) => {
-      if (s && !(c.full_name.toLowerCase().includes(s) || c.email.toLowerCase().includes(s) || (digits && c.whatsapp.includes(digits)))) return false;
+      if (s && !(c.full_name.toLowerCase().includes(s) || c.email.toLowerCase().includes(s) || (digits && c.whatsapp.includes(digits)) || pname(c.responsible_id).toLowerCase().includes(s))) return false;
       if (st !== "all" && c.status !== st) return false;
       if (or !== "all" && c.origin !== or) return false;
-      if (emp !== "all" && c.responsible_id !== emp && c.created_by !== emp) return false;
+      if (emp === "none" && c.responsible_id) return false;
+      if (emp !== "all" && emp !== "none" && c.responsible_id !== emp) return false;
       if (dc !== "all") {
         const pend = pendencies(c, docs).some((p) => p.includes("Fatura") || p.includes("Documento"));
         if (dc === "pendente" && !pend) return false;
@@ -76,13 +77,13 @@ export default function Clients() {
           <Button size="sm" variant="secondary" asChild><Link to="/novo"><Plus className="h-4 w-4" />Novo</Link></Button>
         </>} />
       <div className="mb-4 grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
-        <Input className="sm:col-span-3 lg:col-span-2" placeholder="Buscar por nome, e-mail ou WhatsApp" value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} />
+        <Input className="sm:col-span-3 lg:col-span-2" placeholder="Buscar por nome, e-mail, WhatsApp ou funcionário" value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} />
         <Select value={st} onValueChange={(v) => { setSt(v); setPage(1); }}><SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent><SelectItem value="all">Todos os status</SelectItem>{STATUSES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent></Select>
         <Select value={or} onValueChange={(v) => { setOr(v); setPage(1); }}><SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent><SelectItem value="all">Todas as origens</SelectItem><SelectItem value="anuncio">Anúncio</SelectItem><SelectItem value="whatsapp">WhatsApp</SelectItem></SelectContent></Select>
         <Select value={emp} onValueChange={(v) => { setEmp(v); setPage(1); }}><SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent><SelectItem value="all">Todos os funcionários</SelectItem>{profiles.map((p) => <SelectItem key={p.id} value={p.id}>{p.full_name || p.email}</SelectItem>)}</SelectContent></Select>
+          <SelectContent><SelectItem value="all">Todos os funcionários</SelectItem><SelectItem value="none">Sem funcionário atribuído</SelectItem>{profiles.map((p) => <SelectItem key={p.id} value={p.id}>{employeeName(p)}{!p.active ? " (inativo)" : ""}</SelectItem>)}</SelectContent></Select>
         <div className="flex gap-2">
           <Select value={dc} onValueChange={(v) => { setDc(v); setPage(1); }}><SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent><SelectItem value="all">Documentos</SelectItem><SelectItem value="pendente">Com pendência</SelectItem><SelectItem value="ok">Completos</SelectItem></SelectContent></Select>
@@ -129,7 +130,7 @@ export default function Clients() {
             <div className="hidden overflow-x-auto rounded-xl border bg-card md:block">
               <table className="w-full text-sm">
                 <thead className="bg-muted/60 text-left text-xs uppercase text-muted-foreground">
-                  <tr>{["Nome", "WhatsApp", "E-mail", "Origem", "Status", "Responsável", "Fatura média", ...(isAdmin ? ["Receita 4%"] : []), "Docs", "Cadastro", "Atualização", ...(isAdmin ? ["Lixeira"] : [])].map((h) => <th key={h} className="px-3 py-2.5 font-semibold">{h}</th>)}</tr>
+                  <tr>{["Nome", "WhatsApp", "E-mail", "Origem", "Status", "Funcionário", "Fatura média", ...(isAdmin ? ["Receita 4%"] : []), "Docs", "Cadastro", "Atualização", ...(isAdmin ? ["Lixeira"] : [])].map((h) => <th key={h} className="px-3 py-2.5 font-semibold">{h}</th>)}</tr>
                 </thead>
                 <tbody>
                   {shown.map((c) => (

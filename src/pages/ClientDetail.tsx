@@ -5,7 +5,7 @@ import { ArrowLeft, Download, FileText, Upload, Eye, MessageCircle, Send } from 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfiles } from "@/hooks/useCrmData";
-import { DOC_STATUSES, DOC_TYPES, ORIGINS, STATUSES, brl, calcRevenue, fmtDate, fmtDateTime, fmtMonth, fmtWhatsapp, normalizeWhatsapp, statusLabel, pendencies, type ClientStatus, type DocStatus, type DocType } from "@/lib/crm";
+import { DOC_STATUSES, DOC_TYPES, ORIGINS, STATUSES, brl, calcRevenue, fmtDate, fmtDateTime, fmtMonth, fmtWhatsapp, normalizeWhatsapp, statusLabel, pendencies, type ClientStatus, type DocStatus, type DocType, employeeName } from "@/lib/crm";
 import { downloadDoc, openDoc, uploadDoc, validateDocument, validatePdf } from "@/lib/docs";
 import { StatusBadge, DocBadge } from "@/components/crm/StatusBadge";
 import { Loading, Empty } from "@/components/crm/States";
@@ -24,7 +24,7 @@ export default function ClientDetail() {
   const { user, profile, isAdmin, isInternal } = useAuth();
   const qc = useQueryClient();
   const { data: profiles = [] } = useProfiles();
-  const pname = (u: string | null) => profiles.find((p) => p.id === u)?.full_name || "—";
+  const pname = (u: string | null) => { const p = profiles.find((x) => x.id === u); return p ? employeeName(p) : "—"; };
   const canManage = isAdmin || isInternal;
 
   const { data, isLoading, refetch } = useQuery({
@@ -197,7 +197,7 @@ export default function ClientDetail() {
       <Link to="/clientes" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary"><ArrowLeft className="h-4 w-4" />Voltar</Link>
       <div className="flex flex-col gap-3 rounded-xl border bg-card p-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs text-muted-foreground">#{c.code} · cadastrado em {fmtDateTime(c.created_at)} por {pname(c.created_by)} · atualizado {fmtDateTime(c.updated_at)}</p>
+          <p className="text-xs text-muted-foreground">#{c.code} · cadastrado em {fmtDateTime(c.created_at)} por {pname(c.created_by)} · funcionário responsável: <strong className="text-foreground">{c.responsible_id ? pname(c.responsible_id) : "Sem funcionário atribuído"}</strong> · atualizado {fmtDateTime(c.updated_at)}</p>
           <h1 className="text-2xl font-extrabold">{c.full_name}</h1>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-sm"><StatusBadge status={c.status} /><span>{fmtWhatsapp(c.whatsapp)}</span><span className="text-muted-foreground">{ORIGINS[c.origin as keyof typeof ORIGINS]}</span></div>
         </div>
@@ -252,9 +252,9 @@ export default function ClientDetail() {
               <Select value={f.origin} onValueChange={(v) => setF({ ...f, origin: v })}><SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent><SelectItem value="anuncio">Anúncio</SelectItem><SelectItem value="whatsapp">WhatsApp</SelectItem></SelectContent></Select></div>
             <div className="space-y-1"><Label>Valor médio da fatura (R$)</Label><Input inputMode="decimal" value={f.avg_bill ?? ""} onChange={(e) => setF({ ...f, avg_bill: e.target.value })} /></div>
-            <div className="space-y-1"><Label>Responsável</Label>
-              <Select value={f.responsible_id} onValueChange={(v) => setF({ ...f, responsible_id: v })}><SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                <SelectContent>{profiles.filter((p) => p.active).map((p) => <SelectItem key={p.id} value={p.id}>{p.full_name || p.email}</SelectItem>)}</SelectContent></Select></div>
+            <div className="space-y-1"><Label>Funcionário responsável</Label>
+              <Select value={f.responsible_id} onValueChange={(v) => setF({ ...f, responsible_id: v })}><SelectTrigger><SelectValue placeholder="Sem funcionário atribuído" /></SelectTrigger>
+                <SelectContent>{profiles.filter((p) => p.active).map((p) => <SelectItem key={p.id} value={p.id}>{employeeName(p)}</SelectItem>)}</SelectContent></Select></div>
             <div className="space-y-1"><Label>Último contato</Label><Input type="date" value={f.last_contact_at ?? ""} onChange={(e) => setF({ ...f, last_contact_at: e.target.value })} /></div>
             <div className="space-y-1"><Label>Próximo contato</Label><Input type="date" value={f.next_contact_at ?? ""} onChange={(e) => setF({ ...f, next_contact_at: e.target.value })} /></div>
           </div>

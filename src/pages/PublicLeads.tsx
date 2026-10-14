@@ -43,11 +43,10 @@ export default function PublicLeads() {
       if (documentsError) throw documentsError;
       const eventRows = (events ?? []) as PublicEvent[];
       const documentRows = (documents ?? []) as PublicDocument[];
-      const siteClicks = new Set(eventRows.filter((event) => event.event_type === "self_registration").map((event) => event.lead_id)).size;
       const consultantClicks = new Set(eventRows.filter((event) => event.event_type === "consultant_whatsapp").map((event) => event.lead_id)).size;
       const eventsByLead = eventRows.reduce<Record<string, PublicEvent[]>>((acc, event) => { (acc[event.lead_id] ??= []).push(event); return acc; }, {});
       const documentsByLead = documentRows.reduce<Record<string, PublicDocument[]>>((acc, document) => { (acc[document.lead_id] ??= []).push(document); return acc; }, {});
-      return { leads: (leads ?? []) as PublicLead[], siteClicks, consultantClicks, eventsByLead, documentsByLead };
+      return { leads: (leads ?? []) as PublicLead[], consultantClicks, eventsByLead, documentsByLead };
     },
   });
 
