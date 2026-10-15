@@ -49,11 +49,15 @@ export default function PublicRegistration() {
     // registramos um marcador neutro e deixamos a informação para o atendimento.
     const base = { id, full_name: form.full_name.trim(), whatsapp, city: "Não informado", source: "public_cadastro", status: "capturado" };
     setLoading(true);
-    let { error } = await supabase.from("public_registration_leads").insert({ ...base, email });
-    // Compatibilidade: se o banco ainda não tiver a coluna de e-mail, salva o restante (o e-mail segue na mensagem).
-    if (error && /email/i.test(error.message)) ({ error } = await supabase.from("public_registration_leads").insert(base));
+    // Salva primeiro os campos essenciais para o fluxo público não travar por divergência de schema.
+    const { error } = await supabase.from("public_registration_leads").insert(base);
+    if (error) {
+      setLoading(false);
+      return toast({ title: "Não foi possível concluir agora.", description: "Tente novamente em alguns instantes.", variant: "destructive" });
+    }
+    // O e-mail é complementar: se a coluna estiver disponível, atualiza sem bloquear o avanço.
+    void supabase.from("public_registration_leads").update({ email }).eq("id", id);
     setLoading(false);
-    if (error) return toast({ title: "Não foi possível concluir agora.", description: "Tente novamente em alguns instantes.", variant: "destructive" });
     setLeadId(id);
   }
 
