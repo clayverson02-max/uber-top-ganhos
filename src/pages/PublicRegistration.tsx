@@ -65,12 +65,12 @@ export default function PublicRegistration() {
       consultant_name: form.referral_type === "consultor" ? form.consultant_name : null,
     };
     setLoading(true);
-    const { error } = await supabase.from("public_registration_leads").insert(base);
+    const { error } = await (supabase as any).from("public_registration_leads").insert(base);
     if (error) {
       setLoading(false);
       return toast({ title: "Não foi possível concluir agora.", description: "Tente novamente em alguns instantes.", variant: "destructive" });
     }
-    void supabase.from("public_registration_leads").update({ email }).eq("id", id);
+    void (supabase as any).from("public_registration_leads").update({ email }).eq("id", id);
     trackLead(id, form, email, whatsapp);
     setLoading(false);
     setLeadId(id);
