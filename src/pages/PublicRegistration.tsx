@@ -12,7 +12,8 @@ const initialForm: FormState = { full_name: "", email: "", whatsapp: "", referra
 const emailOk = (v: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v) && v.length <= 255;
 const consultantOptions = ["Clayverson", "Equipe de rua", "Advance Officeus"];
 
-function trackLead(leadId: string, form: FormState, email: string, whatsapp: string) {\n  (window as any).fbq?.("track", "Lead", { content_name: "Análise gratuita", referral_type: form.referral_type });
+function trackLead(leadId: string, form: FormState, email: string, whatsapp: string) {
+  (window as any).fbq?.("track", "Lead", { content_name: "Análise gratuita", referral_type: form.referral_type });
   void supabase.from("public_registration_events").insert({ lead_id: leadId, event_type: "self_registration" });
   void supabase.functions.invoke("meta-lead-event", {
     body: { event_name: "Lead", event_id: leadId, email, phone: whatsapp, name: form.full_name.trim(), referral_type: form.referral_type, consultant_name: form.consultant_name || null },
