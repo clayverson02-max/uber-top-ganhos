@@ -1,5 +1,5 @@
 import { ChangeEvent, FormEvent, useMemo, useState } from "react";
-import { CheckCircle2, FileText, IdCard, Mail, MessageCircle, Phone, ShieldCheck, UserRound, Zap } from "lucide-react";
+import { CheckCircle2, FileText, IdCard, Mail, MessageCircle, Phone, ShieldCheck, UserRound, Users, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,9 +7,17 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
 import { normalizeWhatsapp } from "@/lib/crm";
 
-type FormState = { full_name: string; email: string; whatsapp: string };
-const initialForm: FormState = { full_name: "", email: "", whatsapp: "" };
+type FormState = { full_name: string; email: string; whatsapp: string; referral_type: "proprio" | "consultor"; consultant_name: string };
+const initialForm: FormState = { full_name: "", email: "", whatsapp: "", referral_type: "proprio", consultant_name: "" };
 const emailOk = (v: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v) && v.length <= 255;
+const consultantOptions = ["Clayverson", "Equipe de rua", "Advance Officeus"];
+
+function trackLead(leadId: string, form: FormState, email: string, whatsapp: string) {
+  void supabase.from("public_registration_events").insert({ lead_id: leadId, event_type: "self_registration" });
+  void supabase.functions.invoke("meta-lead-event", {
+    body: { event_name: "Lead", event_id: leadId, email, phone: whatsapp, name: form.full_name.trim(), referral_type: form.referral_type, consultant_name: form.consultant_name || null },
+  });
+}
 
 export default function PublicRegistration() {
   const [form, setForm] = useState<FormState>(initialForm);
@@ -22,6 +30,7 @@ export default function PublicRegistration() {
     `Nome: ${form.full_name.trim()}`,
     `E-mail: ${form.email.trim()}`,
     `WhatsApp: ${form.whatsapp.trim()}`,
+    `Indicação: ${form.referral_type === "consultor" ? `Consultor ${form.consultant_name}` : "Vim por conta própria"}`,
     "",
     "Vou enviar aqui no atendimento:",
     "• Fatura de energia em PDF, de preferência sem senha;",
@@ -32,7 +41,6 @@ export default function PublicRegistration() {
   ].join("\n"), [form]);
 
   const whatsappLink = `https://wa.me/?text=${encodeURIComponent(message)}`;
-
   const update = (field: keyof FormState) => (event: ChangeEvent<HTMLInputElement>) =>
     setForm((current) => ({ ...current, [field]: event.target.value }));
 
@@ -43,26 +51,33 @@ export default function PublicRegistration() {
     if (form.full_name.trim().length < 3) return toast({ title: "Informe seu nome completo.", variant: "destructive" });
     if (!emailOk(email)) return toast({ title: "Informe um e-mail válido.", variant: "destructive" });
     if (!/^55\d{10,11}$/.test(whatsapp)) return toast({ title: "Informe um WhatsApp válido com DDD.", description: "Exemplo: (85) 99999-9999", variant: "destructive" });
+    if (form.referral_type === "consultor" && !form.consultant_name) return toast({ title: "Selecione o consultor que indicou você.", variant: "destructive" });
 
     const id = crypto.randomUUID();
-    // A coluna city é obrigatória no banco legado; como a etapa pública não pede cidade,
-    // registramos um marcador neutro e deixamos a informação para o atendimento.
-    const base = { id, full_name: form.full_name.trim(), whatsapp, city: "Não informado", source: "public_cadastro", status: "capturado" };
+    const base = {
+      id,
+      full_name: form.full_name.trim(),
+      whatsapp,
+      city: "Não informado",
+      source: "public_cadastro",
+      status: "capturado",
+      referral_type: form.referral_type,
+      consultant_name: form.referral_type === "consultor" ? form.consultant_name : null,
+    };
     setLoading(true);
-    // Salva primeiro os campos essenciais para o fluxo público não travar por divergência de schema.
     const { error } = await supabase.from("public_registration_leads").insert(base);
     if (error) {
       setLoading(false);
       return toast({ title: "Não foi possível concluir agora.", description: "Tente novamente em alguns instantes.", variant: "destructive" });
     }
-    // O e-mail é complementar: se a coluna estiver disponível, atualiza sem bloquear o avanço.
     void supabase.from("public_registration_leads").update({ email }).eq("id", id);
+    trackLead(id, form, email, whatsapp);
     setLoading(false);
     setLeadId(id);
   }
 
   function openWhatsapp() {
-    if (leadId) void supabase.from("public_registration_events" as never).insert({ lead_id: leadId, event_type: "consultant_whatsapp" } as never);
+    if (leadId) void supabase.from("public_registration_events").insert({ lead_id: leadId, event_type: "consultant_whatsapp" });
     window.open(whatsappLink, "_blank", "noopener,noreferrer");
   }
 
@@ -89,6 +104,29 @@ export default function PublicRegistration() {
               <div className="space-y-2"><Label htmlFor="public-name" className="font-bold text-slate-800">Nome completo</Label><div className="relative"><UserRound className="pointer-events-none absolute left-3 top-3 h-5 w-5 text-slate-400" /><Input id="public-name" value={form.full_name} maxLength={150} onChange={update("full_name")} placeholder="Seu nome completo" className="h-12 pl-10" autoComplete="name" /></div></div>
               <div className="space-y-2"><Label htmlFor="public-email" className="font-bold text-slate-800">E-mail</Label><div className="relative"><Mail className="pointer-events-none absolute left-3 top-3 h-5 w-5 text-slate-400" /><Input id="public-email" type="email" value={form.email} maxLength={255} onChange={update("email")} placeholder="seuemail@exemplo.com" className="h-12 pl-10" autoComplete="email" inputMode="email" /></div></div>
               <div className="space-y-2"><Label htmlFor="public-whatsapp" className="font-bold text-slate-800">WhatsApp</Label><div className="relative"><Phone className="pointer-events-none absolute left-3 top-3 h-5 w-5 text-slate-400" /><Input id="public-whatsapp" value={form.whatsapp} maxLength={20} onChange={update("whatsapp")} placeholder="(85) 99999-9999" className="h-12 pl-10" inputMode="tel" autoComplete="tel" /></div></div>
+
+              <div className="space-y-2">
+                <Label className="font-bold text-slate-800">Como você chegou até nós?</Label>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <button type="button" onClick={() => setForm((current) => ({ ...current, referral_type: "proprio", consultant_name: "" }))} className={`rounded-xl border p-3 text-left text-sm font-semibold transition ${form.referral_type === "proprio" ? "border-emerald-600 bg-emerald-50 text-emerald-900" : "border-slate-200 hover:border-emerald-300"}`}>
+                    Vim por conta própria
+                  </button>
+                  <button type="button" onClick={() => setForm((current) => ({ ...current, referral_type: "consultor" }))} className={`rounded-xl border p-3 text-left text-sm font-semibold transition ${form.referral_type === "consultor" ? "border-emerald-600 bg-emerald-50 text-emerald-900" : "border-slate-200 hover:border-emerald-300"}`}>
+                    Fui indicado por consultor
+                  </button>
+                </div>
+              </div>
+
+              {form.referral_type === "consultor" && (
+                <div className="space-y-2">
+                  <Label htmlFor="consultant-name" className="font-bold text-slate-800"><Users className="mr-1 inline h-4 w-4" />Qual consultor indicou você?</Label>
+                  <select id="consultant-name" value={form.consultant_name} onChange={(event) => setForm((current) => ({ ...current, consultant_name: event.target.value }))} className="flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                    <option value="">Selecione o consultor</option>
+                    {consultantOptions.map((name) => <option key={name} value={name}>{name}</option>)}
+                  </select>
+                </div>
+              )}
+
               <Button type="submit" disabled={loading} className="w-full rounded-xl bg-emerald-600 py-6 text-base font-extrabold text-white shadow-lg shadow-emerald-600/20 hover:bg-emerald-700">{loading ? "Salvando seus dados..." : "Continuar"}</Button>
               <p className="flex items-center justify-center gap-1.5 text-center text-xs leading-5 text-slate-500"><ShieldCheck className="h-4 w-4" />Seus dados são usados somente para o seu atendimento.</p>
             </form>
