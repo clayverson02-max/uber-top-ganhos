@@ -45,7 +45,9 @@ export default function PublicRegistration() {
     if (!/^55\d{10,11}$/.test(whatsapp)) return toast({ title: "Informe um WhatsApp válido com DDD.", description: "Exemplo: (85) 99999-9999", variant: "destructive" });
 
     const id = crypto.randomUUID();
-    const base = { id, full_name: form.full_name.trim(), whatsapp, city: "", source: "public_cadastro", status: "capturado" };
+    // A coluna city é obrigatória no banco legado; como a etapa pública não pede cidade,
+    // registramos um marcador neutro e deixamos a informação para o atendimento.
+    const base = { id, full_name: form.full_name.trim(), whatsapp, city: "Não informado", source: "public_cadastro", status: "capturado" };
     setLoading(true);
     let { error } = await supabase.from("public_registration_leads").insert({ ...base, email });
     // Compatibilidade: se o banco ainda não tiver a coluna de e-mail, salva o restante (o e-mail segue na mensagem).
