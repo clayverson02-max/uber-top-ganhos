@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useMemo, useState } from "react";
 import { CheckCircle2, FileText, IdCard, Mail, MessageCircle, Phone, ShieldCheck, UserRound, Users, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
 import { normalizeWhatsapp } from "@/lib/crm";
 
-type ConsultantOption = { id: string; name: string };
 type FormState = { full_name: string; email: string; whatsapp: string; referral_type: "proprio" | "consultor"; consultant_id: string; consultant_name: string };
 const initialForm: FormState = { full_name: "", email: "", whatsapp: "", referral_type: "proprio", consultant_id: "", consultant_name: "" };
 const emailOk = (v: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v) && v.length <= 255;
@@ -24,15 +23,6 @@ export default function PublicRegistration() {
   const [form, setForm] = useState<FormState>(initialForm);
   const [loading, setLoading] = useState(false);
   const [leadId, setLeadId] = useState<string | null>(null);
-  const [consultants, setConsultants] = useState<ConsultantOption[]>([]);
-
-  useEffect(() => {
-    let active = true;
-    void (supabase as any).from("consultants").select("id,name").eq("active", true).order("name").then(({ data }: { data: ConsultantOption[] | null }) => {
-      if (active) setConsultants(data ?? []);
-    });
-    return () => { active = false; };
-  }, []);
 
   const message = useMemo(() => [
     "Olá! Quero fazer minha análise gratuita na Conta Amiga.",
@@ -61,7 +51,7 @@ export default function PublicRegistration() {
     if (form.full_name.trim().length < 3) return toast({ title: "Informe seu nome completo.", variant: "destructive" });
     if (!emailOk(email)) return toast({ title: "Informe um e-mail válido.", variant: "destructive" });
     if (!/^55\d{10,11}$/.test(whatsapp)) return toast({ title: "Informe um WhatsApp válido com DDD.", description: "Exemplo: (85) 99999-9999", variant: "destructive" });
-    if (form.referral_type === "consultor" && !form.consultant_id) return toast({ title: "Selecione o consultor que indicou você.", variant: "destructive" });
+    if (form.referral_type === "consultor" && form.consultant_name.trim().length < 2) return toast({ title: "Digite o nome do consultor.", variant: "destructive" });
 
     const id = crypto.randomUUID();
     const base = {
@@ -72,8 +62,8 @@ export default function PublicRegistration() {
       source: "public_cadastro",
       status: "capturado",
       referral_type: form.referral_type,
-      consultant_id: form.referral_type === "consultor" ? form.consultant_id : null,
-      consultant_name: form.referral_type === "consultor" ? form.consultant_name : null,
+      consultant_id: null,
+      consultant_name: form.referral_type === "consultor" ? form.consultant_name.trim() : null,
     };
     setLoading(true);
     const { error } = await (supabase as any).from("public_registration_leads").insert(base);
@@ -131,10 +121,15 @@ export default function PublicRegistration() {
               {form.referral_type === "consultor" && (
                 <div className="space-y-2">
                   <Label htmlFor="consultant-name" className="font-bold text-slate-800"><Users className="mr-1 inline h-4 w-4" />Qual consultor indicou você?</Label>
-                  <select id="consultant-name" value={form.consultant_name} onChange={(event) => { const consultant = consultants.find((item) => item.id === event.target.value); setForm((current) => ({ ...current, consultant_id: consultant?.id ?? "", consultant_name: consultant?.name ?? "" })); }} className="flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                    <option value="">Selecione o consultor</option>
-                    {consultants.map((consultant) => <option key={consultant.id} value={consultant.id}>{consultant.name}</option>)}
-                  </select>
+                  <Input
+                    id="consultant-name"
+                    value={form.consultant_name}
+                    maxLength={120}
+                    onChange={(event) => setForm((current) => ({ ...current, consultant_id: "", consultant_name: event.target.value }))}
+                    placeholder="Digite o nome do consultor"
+                    className="h-12"
+                    autoComplete="off"
+                  />
                 </div>
               )}
 
