@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
 type Consultant = { id: string; name: string; active: boolean; created_at: string };
-type Lead = { consultant_id: string | null; created_at: string; referral_type: string | null };
+type Lead = { consultant_id: string | null; consultant_name: string | null; created_at: string; referral_type: string | null };
 
 export default function Consultants() {
   const qc = useQueryClient();
@@ -26,7 +26,7 @@ export default function Consultants() {
       const end = endDate.toISOString();
       const [{ data: consultants, error: consultantsError }, { data: leads, error: leadsError }] = await Promise.all([
         (supabase as any).from("consultants").select("id,name,active,created_at").order("name"),
-        (supabase as any).from("public_registration_leads").select("consultant_id,created_at,referral_type").gte("created_at", start).lt("created_at", end).is("deleted_at", null),
+        (supabase as any).from("public_registration_leads").select("consultant_id,consultant_name,created_at,referral_type").gte("created_at", start).lt("created_at", end).is("deleted_at", null),
       ]);
       if (consultantsError) throw consultantsError;
       if (leadsError) throw leadsError;
@@ -34,11 +34,24 @@ export default function Consultants() {
     },
   });
 
+  const normalizeName = (value: string | null | undefined) =>
+    (value ?? "").trim().toLocaleLowerCase("pt-BR").normalize("NFD").replace(/\p{Diacritic}/gu, "");
+
   const counts = useMemo(() => {
     const result: Record<string, number> = {};
-    (data?.leads ?? []).forEach((lead) => { if (lead.consultant_id) result[lead.consultant_id] = (result[lead.consultant_id] ?? 0) + 1; });
+    const registered = data?.consultants ?? [];
+    const consultantById = new Map(registered.map((consultant) => [consultant.id, consultant]));
+
+    (data?.leads ?? []).forEach((lead) => {
+      const matched = lead.consultant_id
+        ? consultantById.get(lead.consultant_id)
+        : registered.find((consultant) => normalizeName(consultant.name) === normalizeName(lead.consultant_name));
+
+      if (matched) result[matched.id] = (result[matched.id] ?? 0) + 1;
+    });
+
     return result;
-  }, [data?.leads]);
+  }, [data?.leads, data?.consultants]);
 
   async function addConsultant(event: React.FormEvent) {
     event.preventDefault();
