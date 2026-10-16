@@ -18,7 +18,6 @@ import NotFound from "./pages/NotFound";
 import PublicRegistration from "./pages/PublicRegistration";
 import PublicLeads from "./pages/PublicLeads";
 import Consultants from "./pages/Consultants";
-import WhatsApp from "./pages/WhatsApp";
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: false } } });
 
@@ -37,16 +36,13 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/reset-password" element={<ResetPassword />} />
-
             <Route path="/cadastro" element={<PublicRegistration />} />
             <Route path="/signup" element={<Navigate to="/login" replace />} />
             <Route path="/register" element={<Navigate to="/login" replace />} />
-
             <Route element={<AppLayout />}>
               <Route path="/" element={<Home />} />
               <Route path="/clientes" element={<ClientsAccess><Clients /></ClientsAccess>} />
               <Route path="/captacoes" element={<ClientsAccess><PublicLeads /></ClientsAccess>} />
-              <Route path="/whatsapp" element={<ClientsAccess><WhatsApp /></ClientsAccess>} />
               <Route path="/consultores" element={<AdminOnly><Consultants /></AdminOnly>} />
               <Route path="/clientes/:id" element={<MemberAccess><ClientDetail /></MemberAccess>} />
               <Route path="/novo" element={<NewClient />} />
