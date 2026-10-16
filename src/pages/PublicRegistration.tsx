@@ -48,8 +48,7 @@ export default function PublicRegistration() {
     "• Se não conseguir PDF, envio uma foto legível pelo WhatsApp.",
     "",
     "Sei que o nome do titular precisa ser igual ao nome da conta de energia.",
-  ].join("
-"), [form]);
+  ].join("\n"), [form]);
 
   const whatsappLink = `https://wa.me/?text=${encodeURIComponent(message)}`;
   const update = (field: keyof FormState) => (event: ChangeEvent<HTMLInputElement>) =>
