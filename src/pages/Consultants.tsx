@@ -60,9 +60,9 @@ export default function Consultants() {
     setBusy(true);
     const { error } = await (supabase as any).from("consultants").insert({ name: clean });
     setBusy(false);
-    if (error) return toast.error(error.code === "23505" ? "Esse consultor já está cadastrado." : error.message);
+    if (error) return toast.error(error.code === "23505" ? "Esse influencer já está cadastrado." : error.message);
     setName("");
-    toast.success("Consultor cadastrado.");
+    toast.success("Influencer cadastrado.");
     qc.invalidateQueries({ queryKey: ["consultants-page"] });
   }
 
@@ -71,7 +71,7 @@ export default function Consultants() {
     const { error } = await (supabase as any).from("consultants").update({ active: !consultant.active, updated_at: new Date().toISOString() }).eq("id", consultant.id);
     setBusy(false);
     if (error) return toast.error("Não foi possível atualizar: " + error.message);
-    toast.success(consultant.active ? "Consultor desativado." : "Consultor reativado.");
+    toast.success(consultant.active ? "Influencer desativado." : "Influencer reativado.");
     qc.invalidateQueries({ queryKey: ["consultants-page"] });
   }
 
@@ -80,10 +80,10 @@ export default function Consultants() {
 
   return (
     <div>
-      <PageHeader title="Consultores" subtitle="Cadastre quem pode ser selecionado na captação e acompanhe os cadastros indicados." />
+      <PageHeader title="Consultores" subtitle="Cadastre os influencers e acompanhe os cadastros indicados para cada um." />
       <form onSubmit={addConsultant} className="mb-6 flex flex-col gap-3 rounded-2xl border bg-card p-5 sm:flex-row sm:items-end">
-        <div className="flex-1 space-y-1.5"><label className="text-sm font-semibold">Nome do consultor</label><Input value={name} maxLength={120} placeholder="Ex.: João da rua" onChange={(event) => setName(event.target.value)} /></div>
-        <Button type="submit" disabled={busy}><UserPlus className="mr-2 h-4 w-4" />Cadastrar consultor</Button>
+        <div className="flex-1 space-y-1.5"><label className="text-sm font-semibold">Nome do influencer</label><Input value={name} maxLength={120} placeholder="Ex.: Edenilson" onChange={(event) => setName(event.target.value)} /></div>
+        <Button type="submit" disabled={busy}><UserPlus className="mr-2 h-4 w-4" />Cadastrar influencer</Button>
       </form>
 
       <div className="mb-4 flex flex-col gap-3 rounded-2xl border bg-card p-5 sm:flex-row sm:items-center sm:justify-between">
@@ -91,15 +91,15 @@ export default function Consultants() {
         <Input type="month" value={month} onChange={(event) => setMonth(event.target.value)} className="w-full sm:w-48" />
       </div>
 
-      {!consultants.length ? <Empty title="Nenhum consultor cadastrado">Cadastre o primeiro consultor acima.</Empty> : (
+      {!consultants.length ? <Empty title="Nenhum influencer cadastrado">Cadastre o primeiro influencer acima.</Empty> : (
         <div className="grid gap-3 md:grid-cols-2">
           {consultants.map((consultant) => (
             <div key={consultant.id} className="rounded-2xl border bg-card p-5">
               <div className="flex items-start justify-between gap-3">
-                <div><p className="text-lg font-extrabold">{consultant.name}</p><div className="mt-1 flex flex-wrap gap-2"><Badge variant={consultant.active ? "default" : "secondary"}>{consultant.active ? "Aparece no cadastro público" : "Desativado"}</Badge></div></div>
+                <div><p className="text-lg font-extrabold">{consultant.name}</p><div className="mt-1 flex flex-wrap gap-2"><Badge variant={consultant.active ? "default" : "secondary"}>{consultant.active ? "Pode ser informado no cadastro público" : "Desativado"}</Badge></div></div>
                 <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary"><Users className="h-5 w-5" /></div>
               </div>
-              <div className="mt-5 rounded-xl bg-muted/50 p-4"><p className="text-sm text-muted-foreground">Cadastros indicados em {month.split("-").reverse().join("/")}</p><p className="mt-1 text-3xl font-extrabold">{counts[consultant.id] ?? 0}</p><p className="mt-1 text-xs text-muted-foreground">Use essa contagem como base para a comissão combinada.</p></div>
+              <div className="mt-5 rounded-xl bg-muted/50 p-4"><p className="text-sm text-muted-foreground">Cadastros indicados em {month.split("-").reverse().join("/")}</p><p className="mt-1 text-3xl font-extrabold">{counts[consultant.id] ?? 0}</p><p className="mt-1 text-xs text-muted-foreground">Use essa contagem como base para a bonificação.</p></div>
               <Button variant="outline" size="sm" className="mt-4 w-full" disabled={busy} onClick={() => toggle(consultant)}>{consultant.active ? <><UserX className="mr-2 h-4 w-4" />Desativar no cadastro público</> : <><CheckCircle2 className="mr-2 h-4 w-4" />Reativar no cadastro público</>}</Button>
             </div>
           ))}
