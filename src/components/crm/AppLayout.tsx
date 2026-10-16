@@ -1,5 +1,5 @@
 import { NavLink, Navigate, Outlet } from "react-router-dom";
-import { LayoutDashboard, Users, UserPlus, UserRoundSearch, UserRound, Megaphone, Wallet, ShieldCheck, Trash2, LogOut, Zap } from "lucide-react";
+import { LayoutDashboard, Users, UserPlus, UserRoundSearch, UserRound, MessageCircle, Megaphone, Wallet, ShieldCheck, Trash2, LogOut, Zap } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Loading } from "./States";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ export function AppLayout() {
         { to: "/", icon: LayoutDashboard, label: "Dashboard" },
         { to: "/clientes", icon: Users, label: "Clientes" },
         { to: "/captacoes", icon: UserRoundSearch, label: "Captações" },
+        { to: "/whatsapp", icon: MessageCircle, label: "WhatsApp" },
         { to: "/consultores", icon: UserRound, label: "Influencers" },
         { to: "/novo", icon: UserPlus, label: "Cadastrar" },
         { to: "/remarketing", icon: Megaphone, label: "Remarketing" },
@@ -34,6 +35,7 @@ export function AppLayout() {
       ? [
           { to: "/clientes", icon: Users, label: "Clientes" },
           { to: "/captacoes", icon: UserRoundSearch, label: "Captações" },
+          { to: "/whatsapp", icon: MessageCircle, label: "WhatsApp" },
           { to: "/novo", icon: UserPlus, label: "Cadastrar cliente" },
         ]
       : [{ to: "/novo", icon: UserPlus, label: "Cadastrar cliente" }];
