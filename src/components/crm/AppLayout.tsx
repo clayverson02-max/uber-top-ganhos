@@ -1,5 +1,5 @@
 import { NavLink, Navigate, Outlet } from "react-router-dom";
-import { LayoutDashboard, Users, UserPlus, UserRoundSearch, UserRound, MessageCircle, Megaphone, Wallet, ShieldCheck, Trash2, LogOut, Zap } from "lucide-react";
+import { LayoutDashboard, Users, UserPlus, UserRoundSearch, UserRound, Megaphone, Wallet, ShieldCheck, Trash2, LogOut, Zap } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Loading } from "./States";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,6 @@ export function AppLayout() {
         { to: "/", icon: LayoutDashboard, label: "Dashboard" },
         { to: "/clientes", icon: Users, label: "Clientes" },
         { to: "/captacoes", icon: UserRoundSearch, label: "Captações" },
-        { to: "/whatsapp", icon: MessageCircle, label: "WhatsApp" },
         { to: "/consultores", icon: UserRound, label: "Influencers" },
         { to: "/novo", icon: UserPlus, label: "Cadastrar" },
         { to: "/remarketing", icon: Megaphone, label: "Remarketing" },
@@ -35,7 +34,6 @@ export function AppLayout() {
       ? [
           { to: "/clientes", icon: Users, label: "Clientes" },
           { to: "/captacoes", icon: UserRoundSearch, label: "Captações" },
-          { to: "/whatsapp", icon: MessageCircle, label: "WhatsApp" },
           { to: "/novo", icon: UserPlus, label: "Cadastrar cliente" },
         ]
       : [{ to: "/novo", icon: UserPlus, label: "Cadastrar cliente" }];
@@ -61,14 +59,11 @@ export function AppLayout() {
           <button onClick={signOut} className="mt-2 flex items-center gap-2 text-xs opacity-90 hover:opacity-100"><LogOut className="h-3.5 w-3.5" />Sair</button>
         </div>
       </aside>
-
       <header className="sticky top-0 z-30 flex items-center justify-between bg-brand px-4 py-3 text-primary-foreground md:hidden">
         <div className="flex items-center gap-2 font-extrabold"><Zap className="h-5 w-5 text-accent" />Conta Amiga</div>
         <button onClick={signOut} aria-label="Sair"><LogOut className="h-5 w-5" /></button>
       </header>
-
       <main className="flex-1 px-4 pb-24 pt-5 md:px-8 md:pb-10 md:pt-8"><div className="mx-auto max-w-7xl"><Outlet /></div></main>
-
       <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t bg-card md:hidden">
         {items.map((i) => (
           <NavLink key={i.to} to={i.to} end={i.to === "/"} className={({ isActive }) =>
