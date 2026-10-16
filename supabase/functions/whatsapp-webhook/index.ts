@@ -20,7 +20,15 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "Método não permitido" }, 405);
 
   try {
-    const payload = await req.json();
+    const rawBody = await req.text();
+    const appSecret = Deno.env.get("META_APP_SECRET");
+    const signature = req.headers.get("x-hub-signature-256") ?? "";
+    if (!appSecret || !signature.startsWith("sha256=")) return json({ error: "Webhook não configurado" }, 503);
+    const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(appSecret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    const digest = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(rawBody));
+    const expected = "sha256=" + [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+    if (signature.length !== expected.length || !crypto.subtle.timingSafeEqual(new TextEncoder().encode(signature), new TextEncoder().encode(expected))) return json({ error: "Assinatura inválida" }, 401);
+    const payload = JSON.parse(rawBody);
     for (const entry of payload.entry ?? []) {
       for (const change of entry.changes ?? []) {
         const value = change.value ?? {};
