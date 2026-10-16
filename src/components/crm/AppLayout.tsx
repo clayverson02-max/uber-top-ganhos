@@ -1,5 +1,5 @@
 import { NavLink, Navigate, Outlet } from "react-router-dom";
-import { LayoutDashboard, Users, UserPlus, UserRoundSearch, UserRoundCog, Megaphone, Wallet, ShieldCheck, Trash2, LogOut, Zap } from "lucide-react";
+import { LayoutDashboard, Users, UserPlus, UserRoundSearch, UserRound, Megaphone, Wallet, ShieldCheck, Trash2, LogOut, Zap } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Loading } from "./States";
 import { Button } from "@/components/ui/button";
