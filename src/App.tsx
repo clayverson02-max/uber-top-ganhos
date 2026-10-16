@@ -39,6 +39,7 @@ const App = () => (
             <Route path="/cadastro" element={<PublicRegistration />} />
             <Route path="/signup" element={<Navigate to="/login" replace />} />
             <Route path="/register" element={<Navigate to="/login" replace />} />
+            <Route path="/whatsapp" element={<Navigate to="/" replace />} />
             <Route element={<AppLayout />}>
               <Route path="/" element={<Home />} />
               <Route path="/clientes" element={<ClientsAccess><Clients /></ClientsAccess>} />
@@ -46,10 +47,10 @@ const App = () => (
               <Route path="/consultores" element={<AdminOnly><Consultants /></AdminOnly>} />
               <Route path="/clientes/:id" element={<MemberAccess><ClientDetail /></MemberAccess>} />
               <Route path="/novo" element={<NewClient />} />
-              <Route path="/remarketing" element={<AdminOnly><Remarketing /></AdminOnly>} />
-              <Route path="/financeiro" element={<AdminOnly><Finance /></AdminOnly>} />
-              <Route path="/lixeira" element={<AdminOnly><Trash /></AdminOnly>} />
-              <Route path="/usuarios" element={<AdminOnly><UsersPage /></AdminOnly>} />
+              <Route path="/remarketing" element={<AdminOnly><Remarketing /></Route>} />
+              <Route path="/financeiro" element={<AdminOnly><Finance /></Route>} />
+              <Route path="/lixeira" element={<AdminOnly><Trash /></Route>} />
+              <Route path="/usuarios" element={<AdminOnly><UsersPage /></Route>} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
