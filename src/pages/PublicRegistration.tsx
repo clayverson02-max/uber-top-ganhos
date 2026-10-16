@@ -7,10 +7,10 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
 import { normalizeWhatsapp } from "@/lib/crm";
 
-type ConsultantOption = { id: string; name: string };\ntype FormState = { full_name: string; email: string; whatsapp: string; referral_type: "proprio" | "consultor"; consultant_id: string; consultant_name: string };
+type ConsultantOption = { id: string; name: string };
+type FormState = { full_name: string; email: string; whatsapp: string; referral_type: "proprio" | "consultor"; consultant_id: string; consultant_name: string };
 const initialForm: FormState = { full_name: "", email: "", whatsapp: "", referral_type: "proprio", consultant_id: "", consultant_name: "" };
 const emailOk = (v: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v) && v.length <= 255;
-const consultantOptions = ["Clayverson", "Equipe de rua", "Advance Officeus"];
 
 function trackLead(leadId: string, form: FormState, email: string, whatsapp: string) {
   (window as any).fbq?.("track", "Lead", { content_name: "Análise gratuita", referral_type: form.referral_type });
@@ -23,7 +23,16 @@ function trackLead(leadId: string, form: FormState, email: string, whatsapp: str
 export default function PublicRegistration() {
   const [form, setForm] = useState<FormState>(initialForm);
   const [loading, setLoading] = useState(false);
-  const [leadId, setLeadId] = useState<string | null>(null);\n  const [consultants, setConsultants] = useState<ConsultantOption[]>([]);\n\n  useEffect(() => {\n    let active = true;\n    void (supabase as any).from("consultants").select("id,name").eq("active", true).order("name").then(({ data }: { data: ConsultantOption[] | null }) => {\n      if (active) setConsultants(data ?? []);\n    });\n    return () => { active = false; };\n  }, []);
+  const [leadId, setLeadId] = useState<string | null>(null);
+  const [consultants, setConsultants] = useState<ConsultantOption[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    void (supabase as any).from("consultants").select("id,name").eq("active", true).order("name").then(({ data }: { data: ConsultantOption[] | null }) => {
+      if (active) setConsultants(data ?? []);
+    });
+    return () => { active = false; };
+  }, []);
 
   const message = useMemo(() => [
     "Olá! Quero fazer minha análise gratuita na Conta Amiga.",
@@ -39,7 +48,8 @@ export default function PublicRegistration() {
     "• Se não conseguir PDF, envio uma foto legível pelo WhatsApp.",
     "",
     "Sei que o nome do titular precisa ser igual ao nome da conta de energia.",
-  ].join("\n"), [form]);
+  ].join("
+"), [form]);
 
   const whatsappLink = `https://wa.me/?text=${encodeURIComponent(message)}`;
   const update = (field: keyof FormState) => (event: ChangeEvent<HTMLInputElement>) =>
@@ -63,7 +73,8 @@ export default function PublicRegistration() {
       source: "public_cadastro",
       status: "capturado",
       referral_type: form.referral_type,
-      consultant_id: form.referral_type === "consultor" ? form.consultant_id : null,\n      consultant_name: form.referral_type === "consultor" ? form.consultant_name : null,
+      consultant_id: form.referral_type === "consultor" ? form.consultant_id : null,
+      consultant_name: form.referral_type === "consultor" ? form.consultant_name : null,
     };
     setLoading(true);
     const { error } = await (supabase as any).from("public_registration_leads").insert(base);
