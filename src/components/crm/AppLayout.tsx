@@ -23,7 +23,7 @@ export function AppLayout() {
         { to: "/", icon: LayoutDashboard, label: "Dashboard" },
         { to: "/clientes", icon: Users, label: "Clientes" },
         { to: "/captacoes", icon: UserRoundSearch, label: "Captações" },
-        { to: "/consultores", icon: UserRoundCog, label: "Consultores" },
+        { to: "/consultores", icon: UserRound, label: "Consultores" },
         { to: "/novo", icon: UserPlus, label: "Cadastrar" },
         { to: "/remarketing", icon: Megaphone, label: "Remarketing" },
         { to: "/financeiro", icon: Wallet, label: "Financeiro" },
