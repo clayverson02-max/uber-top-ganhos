@@ -18,6 +18,22 @@ Deno.serve(async (req) => {
     const { conversation_id, phone, text } = await req.json();
     if (!conversation_id || !phone || !String(text ?? "").trim()) return json({ error: "Dados incompletos" }, 400);
 
+    const evolutionBase = (Deno.env.get("EVOLUTION_API_URL") ?? "").replace(/\/$/, "");
+    const evolutionKey = Deno.env.get("EVOLUTION_API_KEY");
+    const evolutionInstance = Deno.env.get("EVOLUTION_INSTANCE_NAME") ?? "conta-amiga";
+    if (evolutionBase && evolutionKey) {
+      const evolutionResponse = await fetch(`${evolutionBase}/message/sendText/${encodeURIComponent(evolutionInstance)}`, {
+        method: "POST",
+        headers: { apikey: evolutionKey, "Content-Type": "application/json" },
+        body: JSON.stringify({ number: String(phone).replace(/\D/g, ""), text: String(text).trim() }),
+      });
+      const evolutionResult = await evolutionResponse.json();
+      if (!evolutionResponse.ok) return json({ error: evolutionResult?.message ?? "Evolution API recusou o envio" }, 502);
+      await admin.from("whatsapp_messages").insert({ conversation_id, direction: "outbound", message_type: "text", body: String(text).trim(), sent_by: userData.user.id, wa_message_id: evolutionResult?.key?.id ?? null });
+      await admin.from("whatsapp_conversations").update({ last_message_at: new Date().toISOString(), updated_at: new Date().toISOString(), status: "em_atendimento", assigned_to: userData.user.id }).eq("id", conversation_id);
+      return json({ ok: true, result: evolutionResult });
+    }
+
     const version = Deno.env.get("META_GRAPH_API_VERSION") ?? "v23.0";
     const phoneNumberId = Deno.env.get("META_WHATSAPP_PHONE_NUMBER_ID");
     const token = Deno.env.get("META_WHATSAPP_ACCESS_TOKEN");
