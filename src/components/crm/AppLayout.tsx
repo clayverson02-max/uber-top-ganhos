@@ -23,7 +23,7 @@ export function AppLayout() {
         { to: "/", icon: LayoutDashboard, label: "Dashboard" },
         { to: "/clientes", icon: Users, label: "Clientes" },
         { to: "/captacoes", icon: UserRoundSearch, label: "Captações" },
-        { to: "/consultores", icon: UserRound, label: "Consultores" },
+        { to: "/consultores", icon: UserRound, label: "Influencers" },
         { to: "/novo", icon: UserPlus, label: "Cadastrar" },
         { to: "/remarketing", icon: Megaphone, label: "Remarketing" },
         { to: "/financeiro", icon: Wallet, label: "Financeiro" },
@@ -55,7 +55,7 @@ export function AppLayout() {
         </nav>
         <div className="border-t border-primary-foreground/20 pt-3 text-sm">
           <p className="truncate font-semibold">{profile.full_name || profile.email}</p>
-          <p className="text-xs opacity-80">{isAdmin ? "Administrador" : isInternal ? "Equipe interna" : "Equipe de rua"}</p>
+          <p className="text-xs opacity-80">{isAdmin ? "Administrador" : isInternal ? "Acesso home" : "Sem acesso"}</p>
           <button onClick={signOut} className="mt-2 flex items-center gap-2 text-xs opacity-90 hover:opacity-100"><LogOut className="h-3.5 w-3.5" />Sair</button>
         </div>
       </aside>
