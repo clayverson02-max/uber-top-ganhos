@@ -30,7 +30,7 @@ export default function PublicRegistration() {
     `Nome: ${form.full_name.trim()}`,
     `E-mail: ${form.email.trim()}`,
     `WhatsApp: ${form.whatsapp.trim()}`,
-    `Indicação: ${form.referral_type === "consultor" ? `Consultor ${form.consultant_name}` : "Vim por conta própria"}`,
+    `Indicação: ${form.referral_type === "consultor" ? form.consultant_name : "Vim por conta própria"}`,
     "",
     "Vou enviar aqui no atendimento:",
     "• Fatura de energia em PDF, de preferência sem senha;",
@@ -107,20 +107,20 @@ export default function PublicRegistration() {
               <div className="space-y-2"><Label htmlFor="public-whatsapp" className="font-bold text-slate-800">WhatsApp</Label><div className="relative"><Phone className="pointer-events-none absolute left-3 top-3 h-5 w-5 text-slate-400" /><Input id="public-whatsapp" value={form.whatsapp} maxLength={20} onChange={update("whatsapp")} placeholder="(85) 99999-9999" className="h-12 pl-10" inputMode="tel" autoComplete="tel" /></div></div>
 
               <div className="space-y-2">
-                <Label className="font-bold text-slate-800">Como você chegou até nós?</Label>
+                <Label className="font-bold text-slate-800">Quem indicou você?</Label>
                 <div className="grid gap-2 sm:grid-cols-2">
                   <button type="button" onClick={() => setForm((current) => ({ ...current, referral_type: "proprio", consultant_id: "", consultant_name: "" }))} className={`rounded-xl border p-3 text-left text-sm font-semibold transition ${form.referral_type === "proprio" ? "border-emerald-600 bg-emerald-50 text-emerald-900" : "border-slate-200 hover:border-emerald-300"}`}>
                     Vim por conta própria
                   </button>
                   <button type="button" onClick={() => setForm((current) => ({ ...current, referral_type: "consultor" }))} className={`rounded-xl border p-3 text-left text-sm font-semibold transition ${form.referral_type === "consultor" ? "border-emerald-600 bg-emerald-50 text-emerald-900" : "border-slate-200 hover:border-emerald-300"}`}>
-                    Fui indicado por consultor
+                    Fui indicado por funcionário ou influencer
                   </button>
                 </div>
               </div>
 
               {form.referral_type === "consultor" && (
                 <div className="space-y-2">
-                  <Label htmlFor="consultant-name" className="font-bold text-slate-800"><Users className="mr-1 inline h-4 w-4" />Qual consultor indicou você?</Label>
+                  <Label htmlFor="consultant-name" className="font-bold text-slate-800"><Users className="mr-1 inline h-4 w-4" />Qual funcionário ou influencer indicou você?</Label>
                   <Input
                     id="consultant-name"
                     value={form.consultant_name}
