@@ -2,6 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
+const constantTimeEqual = (left: string, right: string) => left.length === right.length && [...left].reduce((same, char, index) => same && char === right[index], true);
 
 const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
@@ -27,7 +28,7 @@ Deno.serve(async (req) => {
     const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(appSecret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
     const digest = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(rawBody));
     const expected = "sha256=" + [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
-    if (signature.length !== expected.length || !crypto.subtle.timingSafeEqual(new TextEncoder().encode(signature), new TextEncoder().encode(expected))) return json({ error: "Assinatura inválida" }, 401);
+    if (!constantTimeEqual(signature, expected)) return json({ error: "Assinatura inválida" }, 401);
     const payload = JSON.parse(rawBody);
     for (const entry of payload.entry ?? []) {
       for (const change of entry.changes ?? []) {
