@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, FileText, IdCard, Mail, MessageCircle, Phone, ShieldCheck, UserRound, Users, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -7,8 +7,8 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
 import { normalizeWhatsapp } from "@/lib/crm";
 
-type FormState = { full_name: string; email: string; whatsapp: string; referral_type: "proprio" | "consultor"; consultant_name: string };
-const initialForm: FormState = { full_name: "", email: "", whatsapp: "", referral_type: "proprio", consultant_name: "" };
+type ConsultantOption = { id: string; name: string };\ntype FormState = { full_name: string; email: string; whatsapp: string; referral_type: "proprio" | "consultor"; consultant_id: string; consultant_name: string };
+const initialForm: FormState = { full_name: "", email: "", whatsapp: "", referral_type: "proprio", consultant_id: "", consultant_name: "" };
 const emailOk = (v: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v) && v.length <= 255;
 const consultantOptions = ["Clayverson", "Equipe de rua", "Advance Officeus"];
 
@@ -16,14 +16,14 @@ function trackLead(leadId: string, form: FormState, email: string, whatsapp: str
   (window as any).fbq?.("track", "Lead", { content_name: "Análise gratuita", referral_type: form.referral_type });
   void (supabase as any).from("public_registration_events").insert({ lead_id: leadId, event_type: "self_registration" });
   void supabase.functions.invoke("meta-lead-event", {
-    body: { event_name: "Lead", event_id: leadId, email, phone: whatsapp, name: form.full_name.trim(), referral_type: form.referral_type, consultant_name: form.consultant_name || null },
+    body: { event_name: "Lead", event_id: leadId, email, phone: whatsapp, name: form.full_name.trim(), referral_type: form.referral_type, consultant_name: form.consultant_name || null, consultant_id: form.consultant_id || null },
   });
 }
 
 export default function PublicRegistration() {
   const [form, setForm] = useState<FormState>(initialForm);
   const [loading, setLoading] = useState(false);
-  const [leadId, setLeadId] = useState<string | null>(null);
+  const [leadId, setLeadId] = useState<string | null>(null);\n  const [consultants, setConsultants] = useState<ConsultantOption[]>([]);\n\n  useEffect(() => {\n    let active = true;\n    void (supabase as any).from("consultants").select("id,name").eq("active", true).order("name").then(({ data }: { data: ConsultantOption[] | null }) => {\n      if (active) setConsultants(data ?? []);\n    });\n    return () => { active = false; };\n  }, []);
 
   const message = useMemo(() => [
     "Olá! Quero fazer minha análise gratuita na Conta Amiga.",
@@ -52,7 +52,7 @@ export default function PublicRegistration() {
     if (form.full_name.trim().length < 3) return toast({ title: "Informe seu nome completo.", variant: "destructive" });
     if (!emailOk(email)) return toast({ title: "Informe um e-mail válido.", variant: "destructive" });
     if (!/^55\d{10,11}$/.test(whatsapp)) return toast({ title: "Informe um WhatsApp válido com DDD.", description: "Exemplo: (85) 99999-9999", variant: "destructive" });
-    if (form.referral_type === "consultor" && !form.consultant_name) return toast({ title: "Selecione o consultor que indicou você.", variant: "destructive" });
+    if (form.referral_type === "consultor" && !form.consultant_id) return toast({ title: "Selecione o consultor que indicou você.", variant: "destructive" });
 
     const id = crypto.randomUUID();
     const base = {
@@ -63,7 +63,7 @@ export default function PublicRegistration() {
       source: "public_cadastro",
       status: "capturado",
       referral_type: form.referral_type,
-      consultant_name: form.referral_type === "consultor" ? form.consultant_name : null,
+      consultant_id: form.referral_type === "consultor" ? form.consultant_id : null,\n      consultant_name: form.referral_type === "consultor" ? form.consultant_name : null,
     };
     setLoading(true);
     const { error } = await (supabase as any).from("public_registration_leads").insert(base);
@@ -109,7 +109,7 @@ export default function PublicRegistration() {
               <div className="space-y-2">
                 <Label className="font-bold text-slate-800">Como você chegou até nós?</Label>
                 <div className="grid gap-2 sm:grid-cols-2">
-                  <button type="button" onClick={() => setForm((current) => ({ ...current, referral_type: "proprio", consultant_name: "" }))} className={`rounded-xl border p-3 text-left text-sm font-semibold transition ${form.referral_type === "proprio" ? "border-emerald-600 bg-emerald-50 text-emerald-900" : "border-slate-200 hover:border-emerald-300"}`}>
+                  <button type="button" onClick={() => setForm((current) => ({ ...current, referral_type: "proprio", consultant_id: "", consultant_name: "" }))} className={`rounded-xl border p-3 text-left text-sm font-semibold transition ${form.referral_type === "proprio" ? "border-emerald-600 bg-emerald-50 text-emerald-900" : "border-slate-200 hover:border-emerald-300"}`}>
                     Vim por conta própria
                   </button>
                   <button type="button" onClick={() => setForm((current) => ({ ...current, referral_type: "consultor" }))} className={`rounded-xl border p-3 text-left text-sm font-semibold transition ${form.referral_type === "consultor" ? "border-emerald-600 bg-emerald-50 text-emerald-900" : "border-slate-200 hover:border-emerald-300"}`}>
@@ -121,9 +121,9 @@ export default function PublicRegistration() {
               {form.referral_type === "consultor" && (
                 <div className="space-y-2">
                   <Label htmlFor="consultant-name" className="font-bold text-slate-800"><Users className="mr-1 inline h-4 w-4" />Qual consultor indicou você?</Label>
-                  <select id="consultant-name" value={form.consultant_name} onChange={(event) => setForm((current) => ({ ...current, consultant_name: event.target.value }))} className="flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                  <select id="consultant-name" value={form.consultant_name} onChange={(event) => { const consultant = consultants.find((item) => item.id === event.target.value); setForm((current) => ({ ...current, consultant_id: consultant?.id ?? "", consultant_name: consultant?.name ?? "" })); }} className="flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
                     <option value="">Selecione o consultor</option>
-                    {consultantOptions.map((name) => <option key={name} value={name}>{name}</option>)}
+                    {consultants.map((consultant) => <option key={consultant.id} value={consultant.id}>{consultant.name}</option>)}
                   </select>
                 </div>
               )}
