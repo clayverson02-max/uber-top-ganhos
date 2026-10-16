@@ -32,7 +32,7 @@ export default function UsersPage() {
       })) as UserRow[];
     },
   });
-  const [f, setF] = useState({ full_name: "", display_name: "", email: "", password: "", role: "equipe", monthly_goal: "0" });
+  const [f, setF] = useState({ full_name: "", display_name: "", email: "", password: "", role: "interno", monthly_goal: "0" });
   const [drafts, setDrafts] = useState<Record<string, { display_name: string; monthly_goal: string }>>({});
   const [busy, setBusy] = useState(false);
 
@@ -63,7 +63,7 @@ export default function UsersPage() {
 
   return (
     <div>
-      <PageHeader title="Usuários e metas" subtitle="Crie, edite e acompanhe os funcionários da operação" />
+      <PageHeader title="Funcionários e acessos" subtitle="Gerencie apenas os acessos home da equipe interna e acompanhe as metas" />
       <form className="mb-6 grid gap-3 rounded-xl border bg-card p-5 sm:grid-cols-6" onSubmit={async (e) => {
         e.preventDefault();
         const res = await call({ action: "create", ...f });
@@ -73,11 +73,8 @@ export default function UsersPage() {
         <div className="space-y-1"><Label>Nome no painel</Label><Input value={f.display_name} maxLength={120} placeholder="Funcionário 1" onChange={(e) => setF({ ...f, display_name: e.target.value })} /></div>
         <div className="space-y-1"><Label>E-mail</Label><Input required type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></div>
         <div className="space-y-1"><Label>Senha inicial</Label><Input required type="password" minLength={8} value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} /></div>
-        <div className="space-y-1"><Label>Perfil</Label>
-          <Select value={f.role} onValueChange={(v) => setF({ ...f, role: v })}><SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value="equipe">Equipe de rua</SelectItem><SelectItem value="interno">Equipe interna</SelectItem></SelectContent></Select></div>
         <div className="space-y-1"><Label>Meta mensal</Label><Input inputMode="numeric" type="number" min="0" value={f.monthly_goal} onChange={(e) => setF({ ...f, monthly_goal: e.target.value })} /></div>
-        <Button type="submit" className="sm:col-span-6" disabled={busy}>Criar funcionário</Button>
+        <Button type="submit" className="sm:col-span-6" disabled={busy}>Criar funcionário com acesso home</Button>
       </form>
       {isLoading ? <Loading /> : (
         <div className="space-y-3">
@@ -86,13 +83,12 @@ export default function UsersPage() {
             return <div key={u.id} className="rounded-xl border bg-card p-4">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                 <div className="grid flex-1 gap-3 sm:grid-cols-3">
-                  <div><p className="mb-1 text-xs font-semibold text-muted-foreground">Nome real</p><p className="font-semibold">{u.full_name || "—"} {u.id === user?.id && <span className="text-xs text-muted-foreground">(você)</span>}</p><p className="text-xs text-muted-foreground">{u.email} · {u.active ? "Ativo" : "Desativado"}</p></div>
+                  <div><p className="mb-1 text-xs font-semibold text-muted-foreground">Nome real</p><p className="font-semibold">{u.full_name || "—"} {u.id === user?.id && <span className="text-xs text-muted-foreground">(você)</span>}</p><p className="text-xs text-muted-foreground">{u.email} · {u.active ? "Ativo" : "Desativado"} · {u.role === "interno" ? "Acesso home" : u.role === "admin" ? "Administrador" : "Sem acesso"}</p></div>
                   <div><Label className="text-xs">Nome no painel</Label><Input value={draft.display_name} disabled={u.id === user?.id} onChange={(e) => setDrafts((d) => ({ ...d, [u.id]: { ...draft, display_name: e.target.value } }))} /></div>
                   <div><Label className="text-xs">Meta mensal</Label><Input type="number" min="0" value={draft.monthly_goal} disabled={u.id === user?.id} onChange={(e) => setDrafts((d) => ({ ...d, [u.id]: { ...draft, monthly_goal: e.target.value } }))} /></div>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {u.id !== user?.id && <Button size="sm" onClick={() => saveDetails(u)}>Salvar dados</Button>}
-                  {u.id !== user?.id && <Select value={u.role ?? ""} onValueChange={(v) => call({ action: "set_role", user_id: u.id, role: v })}><SelectTrigger className="h-9 w-40"><SelectValue placeholder="Sem perfil" /></SelectTrigger><SelectContent><SelectItem value="equipe">Equipe de rua</SelectItem><SelectItem value="interno">Equipe interna</SelectItem></SelectContent></Select>}
                   {u.id !== user?.id && <Button size="sm" variant={u.active ? "destructive" : "secondary"} onClick={() => call({ action: "set_active", user_id: u.id, active: !u.active })}>{u.active ? "Desativar" : "Reativar"}</Button>}
                 </div>
               </div>
